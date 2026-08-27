@@ -1,7 +1,7 @@
 {
-  "name": "Kempten Wetter",
-  "short_name": "Kempten Wetter",
-  "description": "Kombinierte Wettervorhersage aus mehreren Modellen für Kempten (Allgäu)",
+  "name": "Wetter Konsens",
+  "short_name": "Wetter Konsens",
+  "description": "Kombinierte Wettervorhersage aus mehreren Modellen, Standort frei wählbar",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

@@ -8,6 +8,8 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kempten Wetter">
@@ -35,13 +37,36 @@
   }
   #topbar .title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   #topbar .dot { width: 7px; height: 7px; border-radius: 50%; background: #f7b538; }
-  #reload-btn {
+  #reload-btn, #location-btn {
     background: rgba(255,255,255,0.14); border: none; color: #f5f7fa;
-    width: 32px; height: 32px; border-radius: 8px; font-size: 16px;
+    width: 32px; height: 32px; border-radius: 8px; font-size: 15px;
     display: flex; align-items: center; justify-content: center;
   }
   #reload-btn.spin { animation: spin 0.8s linear; }
   @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+  #loc-overlay {
+    position: fixed; inset: 0; background: rgba(20,30,50,0.5);
+    display: none; align-items: flex-end; z-index: 100;
+  }
+  #loc-overlay.show { display: flex; }
+  #loc-sheet {
+    background: #f2f4f7; width: 100%; border-radius: 18px 18px 0 0;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    max-height: 70vh; display: flex; flex-direction: column;
+  }
+  #loc-sheet h3 { margin: 0 0 12px; font-size: 16px; font-weight: 600; }
+  #loc-input {
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #d5dae2;
+    font-size: 15px; background: white; box-sizing: border-box;
+  }
+  #loc-results { margin-top: 10px; overflow-y: auto; }
+  .loc-result { padding: 12px 8px; border-bottom: 1px solid #e4e8ee; font-size: 14px; cursor: pointer; }
+  .loc-result:last-child { border-bottom: none; }
+  .loc-result .lname { font-weight: 500; }
+  .loc-result .lregion { font-size: 12px; color: #6b7688; }
+  #loc-close { margin-top: 10px; background: none; border: none; color: #2b567f; font-size: 14px; padding: 8px; align-self: center; }
+  #loc-status { font-size: 13px; color: #6b7688; padding: 8px 4px; }
 
   main { padding: 16px 14px 32px; max-width: 480px; margin: 0 auto; }
 
@@ -82,6 +107,31 @@
   .day-row .dspread { width: 14px; text-align: center; }
   .dspread .warn-dot { width: 6px; height: 6px; border-radius: 50%; background: #e0a53f; display: inline-block; }
 
+  #chart-card { background: white; border-radius: 16px; padding: 14px 10px 8px; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
+  #chart-wrap { position: relative; height: 180px; }
+  #chart-daylabels { display: flex; margin-top: 4px; }
+  #chart-daylabels span { flex: 1; text-align: center; font-size: 11px; color: #8892a0; }
+
+  #tips-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
+  .tip-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid #eef1f5; }
+  .tip-row:last-child { border-bottom: none; }
+  .tip-row .ticon { font-size: 19px; width: 26px; text-align: center; flex: 0 0 auto; }
+  .tip-row .ttext { font-size: 13.5px; line-height: 1.4; }
+  .tip-row .ttext b { font-weight: 500; }
+  #tips-empty { padding: 16px 14px; font-size: 13px; color: #6b7688; text-align: center; }
+
+  #radar-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
+  #radar-map { width: 100%; height: 260px; background: #dfe6ee; }
+  #radar-controls { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid #eef1f5; }
+  #radar-play {
+    background: #1e3a5f; color: white; border: none; width: 30px; height: 30px;
+    border-radius: 50%; font-size: 13px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  }
+  #radar-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 3px; background: #eef1f5; border-radius: 2px; outline: none; }
+  #radar-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #1e3a5f; cursor: pointer; }
+  #radar-time { font-size: 11px; color: #6b7688; min-width: 56px; text-align: right; flex: 0 0 auto; }
+  #radar-attrib { font-size: 10px; color: #9aa4b2; padding: 0 14px 10px; }
+
   #sources-card { background: white; border-radius: 14px; padding: 14px 16px; margin-top: 16px; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
   #sources-card p { margin: 0; font-size: 12px; color: #6b7688; line-height: 1.6; }
   #sources-card .model-chip { display: inline-block; background: #eef4fb; color: #2b567f; font-size: 11px; padding: 2px 8px; border-radius: 20px; margin: 2px 3px 0 0; }
@@ -97,8 +147,21 @@
 
 <div id="topbar">
   <div id="topbar-inner">
-    <div class="title"><span class="dot"></span>Kempten Wetter</div>
-    <button id="reload-btn" aria-label="Aktualisieren">&#8635;</button>
+    <div class="title"><span class="dot"></span><span id="app-title">Kempten Wetter</span></div>
+    <div style="display:flex; gap:8px;">
+      <button id="location-btn" aria-label="Standort ändern">&#128205;</button>
+      <button id="reload-btn" aria-label="Aktualisieren">&#8635;</button>
+    </div>
+  </div>
+</div>
+
+<div id="loc-overlay">
+  <div id="loc-sheet">
+    <h3>Standort ändern</h3>
+    <input type="text" id="loc-input" placeholder="Ort eingeben, z. B. Waltenhofen" autocomplete="off">
+    <div id="loc-status"></div>
+    <div id="loc-results"></div>
+    <button id="loc-close">Abbrechen</button>
   </div>
 </div>
 
@@ -107,7 +170,7 @@
 
   <div id="content">
     <div id="now-card">
-      <p class="place">Kempten (Allgäu)</p>
+      <p class="place" id="place-name">Kempten (Allgäu)</p>
       <div class="temp-row">
         <span class="temp" id="now-temp">&mdash;</span>
         <span class="cond" id="now-cond"></span>
@@ -122,6 +185,26 @@
     <div class="section-label">Nächste Stunden</div>
     <div id="hourly-scroll"></div>
 
+    <div class="section-label">Temperaturverlauf</div>
+    <div id="chart-card">
+      <div id="chart-wrap"><canvas id="temp-chart"></canvas></div>
+      <div id="chart-daylabels"></div>
+    </div>
+
+    <div class="section-label">Für heute &amp; morgen</div>
+    <div id="tips-card"></div>
+
+    <div class="section-label">Regenradar</div>
+    <div id="radar-card">
+      <div id="radar-map"></div>
+      <div id="radar-controls">
+        <button id="radar-play" aria-label="Animation abspielen">&#9654;</button>
+        <input type="range" id="radar-slider" min="0" max="0" value="0">
+        <span id="radar-time">&mdash;</span>
+      </div>
+    </div>
+    <p id="radar-attrib">Radardaten: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer.com</a></p>
+
     <div class="section-label">11-Tage-Konsens-Vorhersage</div>
     <div id="daily-list"></div>
 
@@ -132,10 +215,22 @@
   </div>
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-const LAT = 47.7266, LON = 10.3161;
-const MODELS = ["icon_seamless", "ecmwf_ifs025", "gfs_seamless", "gem_seamless"];
-const MODEL_LABELS = { icon_seamless: "DWD ICON", ecmwf_ifs025: "ECMWF", gfs_seamless: "GFS (USA)", gem_seamless: "GEM (Kanada)" };
+let LAT = 47.7266, LON = 10.3161, PLACE_NAME = "Kempten (Allgäu)";
+
+const savedLoc = localStorage.getItem('wetter-app-location');
+if (savedLoc) {
+  try {
+    const parsed = JSON.parse(savedLoc);
+    if (parsed.lat && parsed.lon) {
+      LAT = parsed.lat; LON = parsed.lon; PLACE_NAME = parsed.name || PLACE_NAME;
+    }
+  } catch (e) {}
+}
+document.getElementById('app-title').textContent = PLACE_NAME.split(',')[0] + ' Wetter';
+const MODELS = ["icon_seamless", "ecmwf_ifs025", "gfs_seamless", "gem_seamless", "meteofrance_seamless"];
+const MODEL_LABELS = { icon_seamless: "DWD ICON", ecmwf_ifs025: "ECMWF", gfs_seamless: "GFS (USA)", gem_seamless: "GEM (Kanada)", meteofrance_seamless: "Météo-France" };
 
 const WMO = {
   0: ["Klar", "\u2600"], 1: ["Meist klar", "\u{1F324}"], 2: ["Teilweise bewölkt", "\u26C5"], 3: ["Bedeckt", "\u2601"],
@@ -181,33 +276,51 @@ async function loadWeather() {
   status.classList.remove('hide');
 
   try {
-    const dailyVars = "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weathercode,windspeed_10m_max";
-    const hourlyVars = "temperature_2m,precipitation_probability,weathercode";
+    const dailyCore = "temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode,windspeed_10m_max";
+    const hourlyCore = "temperature_2m,weathercode";
     const modelsParam = MODELS.join(",");
 
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
-      `&daily=${dailyVars}&hourly=${hourlyVars}&current_weather=true` +
+    const coreUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
+      `&daily=${dailyCore}&hourly=${hourlyCore}&current_weather=true` +
       `&timezone=Europe%2FBerlin&forecast_days=11&models=${modelsParam}`;
 
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("API-Fehler " + res.status);
-    const data = await res.json();
+    const dailyExtra = "precipitation_probability_max,uv_index_max,snowfall_sum";
+    const hourlyExtra = "precipitation_probability";
+    const extraUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
+      `&daily=${dailyExtra}&hourly=${hourlyExtra}` +
+      `&timezone=Europe%2FBerlin&forecast_days=11`;
+
+    const [coreRes, extraRes] = await Promise.all([fetch(coreUrl), fetch(extraUrl)]);
+    if (!coreRes.ok) throw new Error("API-Fehler (Modelle) " + coreRes.status);
+    if (!extraRes.ok) throw new Error("API-Fehler (Zusatzdaten) " + extraRes.status);
+    const data = await coreRes.json();
+    const extra = await extraRes.json();
+
+    data.daily.precipitation_probability_max = extra.daily.precipitation_probability_max;
+    data.daily.uv_index_max = extra.daily.uv_index_max;
+    data.daily.snowfall_sum = extra.daily.snowfall_sum;
+    data.hourly.precipitation_probability = extra.hourly.precipitation_probability;
 
     renderNow(data);
     renderHourly(data);
+    try { renderTempChart(data); } catch (chartErr) { console.error('Chart-Fehler:', chartErr); }
     renderDaily(data);
+    renderTips(data);
     renderSources();
 
     status.classList.add('hide');
     main.classList.remove('loading');
   } catch (err) {
-    status.textContent = navigator.onLine
+    console.error(err);
+    status.textContent = (navigator.onLine
       ? "Daten konnten nicht geladen werden. Bitte erneut versuchen."
-      : "Keine Internetverbindung. Bitte erneut versuchen, sobald du wieder online bist.";
+      : "Keine Internetverbindung. Bitte erneut versuchen, sobald du wieder online bist.")
+      + " (" + err.message + ")";
   }
 }
 
 function renderNow(data) {
+  document.getElementById('place-name').textContent = PLACE_NAME;
   const cw = data.current_weather;
   document.getElementById('now-temp').textContent = Math.round(cw.temperature) + "°C";
   const [label] = wmoInfo(cw.weathercode);
@@ -217,9 +330,8 @@ function renderNow(data) {
   const hourly = data.hourly;
   const nowIdx = hourly.time.findIndex(t => t === cw.time.slice(0,14) + "00") ;
   let rainProb = null;
-  if (nowIdx >= 0) {
-    const keys = MODELS.map(m => `precipitation_probability_${m}`);
-    rainProb = maxOf(keys.map(k => hourly[k] ? hourly[k][nowIdx] : null));
+  if (nowIdx >= 0 && hourly.precipitation_probability) {
+    rainProb = hourly.precipitation_probability[nowIdx];
   }
   document.getElementById('now-rain').innerHTML = rainProb !== null ? `&#128167; ${Math.round(rainProb)}%` : '';
 
@@ -230,7 +342,6 @@ function renderNow(data) {
 function renderHourly(data) {
   const hourly = data.hourly;
   const tempKeys = MODELS.map(m => `temperature_2m_${m}`);
-  const rainKeys = MODELS.map(m => `precipitation_probability_${m}`);
   const now = new Date();
   const container = document.getElementById('hourly-scroll');
   container.innerHTML = '';
@@ -241,7 +352,7 @@ function renderHourly(data) {
   for (let i = startIdx; i < startIdx + 12 && i < hourly.time.length; i++) {
     const t = new Date(hourly.time[i]);
     const temp = avg(tempKeys.map(k => hourly[k] ? hourly[k][i] : null));
-    const rain = maxOf(rainKeys.map(k => hourly[k] ? hourly[k][i] : null));
+    const rain = hourly.precipitation_probability ? hourly.precipitation_probability[i] : null;
 
     const chip = document.createElement('div');
     chip.className = 'hour-chip';
@@ -258,7 +369,6 @@ function renderDaily(data) {
   const daily = data.daily;
   const maxKeys = MODELS.map(m => `temperature_2m_max_${m}`);
   const minKeys = MODELS.map(m => `temperature_2m_min_${m}`);
-  const rainProbKeys = MODELS.map(m => `precipitation_probability_max_${m}`);
   const codeKeys = MODELS.map(m => `weathercode_${m}`);
 
   const allMax = [], allMin = [];
@@ -279,7 +389,7 @@ function renderDaily(data) {
 
     const tMax = allMax[i];
     const tMin = allMin[i];
-    const rainProb = maxOf(rainProbKeys.map(k => daily[k] ? daily[k][i] : null));
+    const rainProb = daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : null;
     const code = mode(codeKeys.map(k => daily[k] ? daily[k][i] : null));
     const tSpread = Math.max(spread(maxKeys.map(k => daily[k] ? daily[k][i] : null)), spread(minKeys.map(k => daily[k] ? daily[k][i] : null)));
 
@@ -303,6 +413,152 @@ function renderDaily(data) {
   }
 }
 
+let tempChart = null;
+
+function renderTempChart(data) {
+  if (typeof Chart === 'undefined') {
+    document.getElementById('chart-card').innerHTML =
+      '<div style="padding:16px; font-size:13px; color:#6b7688; text-align:center;">Diagramm momentan nicht verfügbar.</div>';
+    return;
+  }
+  const hourly = data.hourly;
+  const tempKeys = MODELS.map(m => `temperature_2m_${m}`);
+  const now = new Date();
+
+  let startIdx = hourly.time.findIndex(t => new Date(t) >= now);
+  if (startIdx < 0) startIdx = 0;
+  const endIdx = Math.min(startIdx + 96, hourly.time.length); // 4 Tage
+
+  const labels = [];
+  const values = [];
+  const dayBoundaries = []; // { index, name }
+  let lastDay = null;
+
+  for (let i = startIdx; i < endIdx; i++) {
+    const t = new Date(hourly.time[i]);
+    labels.push(t.toLocaleTimeString('de-DE', {hour:'2-digit'}) + ':00');
+    values.push(avg(tempKeys.map(k => hourly[k] ? hourly[k][i] : null)));
+
+    const dayKey = t.toDateString();
+    if (dayKey !== lastDay) {
+      dayBoundaries.push(i === startIdx ? 'Heute' : DAYNAMES[t.getDay()]);
+      lastDay = dayKey;
+    }
+  }
+
+  document.getElementById('chart-daylabels').innerHTML = dayBoundaries.map(d => `<span>${d}</span>`).join('');
+
+  const ctx = document.getElementById('temp-chart').getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, 0, 180);
+  gradient.addColorStop(0, 'rgba(240,161,60,0.35)');
+  gradient.addColorStop(1, 'rgba(240,161,60,0.02)');
+
+  if (tempChart) tempChart.destroy();
+  tempChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        borderColor: '#e0a53f',
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.35,
+        pointRadius: 0,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => Math.round(ctx.parsed.y) + '°C'
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { maxTicksLimit: 8, font: { size: 10 }, color: '#8892a0' },
+          grid: { display: false }
+        },
+        y: {
+          ticks: { font: { size: 10 }, color: '#8892a0', callback: (v) => v + '°' },
+          grid: { color: '#eef1f5' }
+        }
+      }
+    }
+  });
+}
+
+function renderTips(data) {
+  const daily = data.daily;
+  const maxKeys = MODELS.map(m => `temperature_2m_max_${m}`);
+  const minKeys = MODELS.map(m => `temperature_2m_min_${m}`);
+  const windKeys = MODELS.map(m => `windspeed_10m_max_${m}`);
+
+  function dayVal(keys, i) { return avg(keys.map(k => daily[k] ? daily[k][i] : null)); }
+
+  const tips = [];
+
+  if (daily.time.length > 0) {
+    const i = 0; // heute
+    const tMax = dayVal(maxKeys, i);
+    const tMinToday = dayVal(minKeys, i);
+    const rain = daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : null;
+    const uv = daily.uv_index_max ? daily.uv_index_max[i] : null;
+    const wind = maxOf(windKeys.map(k => daily[k] ? daily[k][i] : null));
+
+    if (uv !== null && uv >= 6) {
+      tips.push(["&#9728;", `Hoher UV-Index (${Math.round(uv)}) &ndash; <b>Sonnencreme auftragen</b>, Mittagssonne meiden.`]);
+    } else if (uv !== null && uv >= 3) {
+      tips.push(["&#9728;", `Mäßiger UV-Index (${Math.round(uv)}) &ndash; <b>Sonnencreme</b> ist sinnvoll.`]);
+    }
+
+    if (rain !== null && rain >= 50) {
+      tips.push(["&#127752;", `Regenwahrscheinlichkeit ${Math.round(rain)}% &ndash; <b>Regenschirm mitnehmen</b>.`]);
+    } else if (rain !== null && rain >= 25) {
+      tips.push(["&#127752;", `Vereinzelt Regen möglich (${Math.round(rain)}%) &ndash; Schirm sicherheitshalber einpacken.`]);
+    }
+
+    if (tMinToday !== null && tMinToday <= 2) {
+      tips.push(["&#10052;", `Frost heute früh (${Math.round(tMinToday)}°C) &ndash; <b>Autoscheiben kratzen</b> einplanen.`]);
+    }
+
+    if (wind !== null && wind >= 50) {
+      tips.push(["&#128168;", `Starker Wind bis ${Math.round(wind)} km/h &ndash; lose Gegenstände sichern.`]);
+    }
+
+    if (tMax !== null && tMax >= 28) {
+      tips.push(["&#128167;", `Hitze bis ${Math.round(tMax)}°C &ndash; ausreichend trinken, Anstrengung meiden.`]);
+    }
+  }
+
+  if (daily.time.length > 1) {
+    const i = 1; // morgen
+    const tMinTom = dayVal(minKeys, i);
+    const snow = daily.snowfall_sum ? daily.snowfall_sum[i] : null;
+
+    if (snow !== null && snow > 0.5) {
+      tips.push(["&#10052;", `Schneefall über Nacht erwartet &ndash; <b>morgen früh Gehweg/Auto freischaufeln</b> einplanen.`]);
+    } else if (tMinTom !== null && tMinTom <= 0) {
+      tips.push(["&#10052;", `Frost in der Nacht (bis ${Math.round(tMinTom)}°C) &ndash; morgen früh vermutlich <b>Autoscheiben kratzen</b>.`]);
+    }
+  }
+
+  const card = document.getElementById('tips-card');
+  if (!tips.length) {
+    card.innerHTML = '<div id="tips-empty">Keine besonderen Hinweise &ndash; unauffälliges Wetter.</div>';
+    return;
+  }
+  card.innerHTML = tips.map(([icon, text]) =>
+    `<div class="tip-row"><span class="ticon">${icon}</span><span class="ttext">${text}</span></div>`
+  ).join('');
+}
+
 function renderSources() {
   const chips = MODELS.map(m => `<span class="model-chip">${MODEL_LABELS[m]}</span>`).join('');
   document.getElementById('sources-text').innerHTML =
@@ -313,10 +569,144 @@ document.getElementById('reload-btn').addEventListener('click', function() {
   this.classList.add('spin');
   setTimeout(() => this.classList.remove('spin'), 800);
   loadWeather();
+  loadRadar();
 });
 
-window.addEventListener('online', loadWeather);
+window.addEventListener('online', function() { loadWeather(); loadRadar(); });
 loadWeather();
+
+// --- Regenradar (RainViewer) ---
+let radarMap = null, radarFrames = [], radarLayer = null, radarIdx = 0, radarTimer = null;
+
+function initRadarMap() {
+  if (radarMap) return;
+  radarMap = L.map('radar-map', { attributionControl: false, zoomControl: false }).setView([LAT, LON], 8);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 12 }).addTo(radarMap);
+  L.marker([LAT, LON]).addTo(radarMap);
+}
+
+async function loadRadar() {
+  try {
+    initRadarMap();
+    const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+    const data = await res.json();
+    const past = data.radar.past || [];
+    const nowcast = data.radar.nowcast || [];
+    radarFrames = past.concat(nowcast);
+
+    const slider = document.getElementById('radar-slider');
+    slider.max = radarFrames.length - 1;
+    radarIdx = past.length - 1 >= 0 ? past.length - 1 : 0;
+    slider.value = radarIdx;
+    showRadarFrame(radarIdx);
+  } catch (err) {
+    document.getElementById('radar-time').textContent = 'nicht verfügbar';
+  }
+}
+
+function showRadarFrame(idx) {
+  if (!radarFrames[idx]) return;
+  const frame = radarFrames[idx];
+  if (radarLayer) radarMap.removeLayer(radarLayer);
+  radarLayer = L.tileLayer(`https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, { opacity: 0.75, maxZoom: 12 });
+  radarLayer.addTo(radarMap);
+
+  const t = new Date(frame.time * 1000);
+  const isFuture = frame.time * 1000 > Date.now();
+  document.getElementById('radar-time').textContent = (isFuture ? '+' : '') + t.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('radar-slider').value = idx;
+}
+
+document.getElementById('radar-slider').addEventListener('input', function() {
+  radarIdx = parseInt(this.value, 10);
+  showRadarFrame(radarIdx);
+});
+
+document.getElementById('radar-play').addEventListener('click', function() {
+  const btn = this;
+  if (radarTimer) {
+    clearInterval(radarTimer);
+    radarTimer = null;
+    btn.innerHTML = '&#9654;';
+    return;
+  }
+  btn.innerHTML = '&#10074;&#10074;';
+  radarTimer = setInterval(() => {
+    radarIdx = (radarIdx + 1) % radarFrames.length;
+    showRadarFrame(radarIdx);
+  }, 500);
+});
+
+loadRadar();
+
+// --- Standort ändern ---
+const locOverlay = document.getElementById('loc-overlay');
+const locInput = document.getElementById('loc-input');
+const locResults = document.getElementById('loc-results');
+const locStatus = document.getElementById('loc-status');
+let locSearchTimer = null;
+
+document.getElementById('location-btn').addEventListener('click', function() {
+  locOverlay.classList.add('show');
+  locInput.value = '';
+  locResults.innerHTML = '';
+  locStatus.textContent = '';
+  setTimeout(() => locInput.focus(), 100);
+});
+
+document.getElementById('loc-close').addEventListener('click', function() {
+  locOverlay.classList.remove('show');
+});
+locOverlay.addEventListener('click', function(e) {
+  if (e.target === locOverlay) locOverlay.classList.remove('show');
+});
+
+locInput.addEventListener('input', function() {
+  clearTimeout(locSearchTimer);
+  const q = this.value.trim();
+  if (q.length < 2) { locResults.innerHTML = ''; locStatus.textContent = ''; return; }
+  locStatus.textContent = 'Suche…';
+  locSearchTimer = setTimeout(() => searchLocation(q), 400);
+});
+
+async function searchLocation(query) {
+  try {
+    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=8&language=de&format=json`);
+    const data = await res.json();
+    locResults.innerHTML = '';
+    if (!data.results || !data.results.length) {
+      locStatus.textContent = 'Keine Orte gefunden.';
+      return;
+    }
+    locStatus.textContent = '';
+    data.results.forEach(r => {
+      const parts = [r.admin1, r.country].filter(Boolean);
+      const div = document.createElement('div');
+      div.className = 'loc-result';
+      div.innerHTML = `<div class="lname">${r.name}</div><div class="lregion">${parts.join(', ')}</div>`;
+      div.addEventListener('click', () => selectLocation(r));
+      locResults.appendChild(div);
+    });
+  } catch (err) {
+    locStatus.textContent = 'Suche fehlgeschlagen. Bitte erneut versuchen.';
+  }
+}
+
+function selectLocation(r) {
+  LAT = r.latitude; LON = r.longitude;
+  PLACE_NAME = r.admin1 ? `${r.name} (${r.admin1})` : r.name;
+  localStorage.setItem('wetter-app-location', JSON.stringify({ lat: LAT, lon: LON, name: PLACE_NAME }));
+  document.getElementById('app-title').textContent = r.name + ' Wetter';
+
+  locOverlay.classList.remove('show');
+  loadWeather();
+
+  if (radarMap) {
+    radarMap.setView([LAT, LON], 8);
+    radarMap.eachLayer(l => { if (l instanceof L.Marker) radarMap.removeLayer(l); });
+    L.marker([LAT, LON]).addTo(radarMap);
+  }
+}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {

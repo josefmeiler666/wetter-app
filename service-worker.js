@@ -32,8 +32,15 @@ self.addEventListener('activate', function(event) {
 self.addEventListener('fetch', function(event) {
   const url = new URL(event.request.url);
 
-  if (url.hostname === 'api.open-meteo.com') {
-    return; // never intercept — always live
+  const passthroughHosts = [
+    'api.open-meteo.com',
+    'api.rainviewer.com',
+    'tilecache.rainviewer.com',
+    'tile.openstreetmap.org',
+    'cdnjs.cloudflare.com'
+  ];
+  if (passthroughHosts.includes(url.hostname)) {
+    return; // never intercept — always live / let the browser cache these natively
   }
 
   const isShellFile = SHELL_FILES.some(function(f) {
