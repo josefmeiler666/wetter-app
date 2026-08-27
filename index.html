@@ -141,6 +141,13 @@
   .tip-row .ttext b { font-weight: 500; }
   #tips-empty { padding: 16px 14px; font-size: 13px; color: #8fa0b8; text-align: center; }
 
+  #rain-forecast-strip { display: flex; gap: 4px; margin-bottom: 8px; padding: 2px; }
+  .rf-bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .rf-bar .rf-track { width: 100%; height: 42px; background: #182231; border-radius: 6px; display: flex; align-items: flex-end; overflow: hidden; }
+  .rf-bar .rf-fill { width: 100%; background: linear-gradient(180deg, #7fb3e8, #3d7ab5); border-radius: 6px 6px 0 0; }
+  .rf-bar .rf-time { font-size: 9.5px; color: #8fa0b8; }
+  #rain-forecast-label { font-size: 11px; color: #8fa0b8; margin: -4px 2px 8px; }
+
   #radar-card { background: #182231; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
   #radar-map { width: 100%; height: 260px; background: #1a2432; }
   #radar-controls { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid #253244; }
@@ -224,6 +231,8 @@
     <div id="tips-card"></div>
 
     <div class="section-label">Regenradar</div>
+    <p id="rain-forecast-label">Niederschlag nächste 2 Std. (15-Min-Prognose)</p>
+    <div id="rain-forecast-strip"></div>
     <div id="radar-card">
       <div id="radar-map"></div>
       <div id="radar-controls">
@@ -232,7 +241,7 @@
         <span id="radar-time">&mdash;</span>
       </div>
     </div>
-    <p id="radar-attrib">Radardaten: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer.com</a> · Karte: OpenStreetMap-Mitwirkende, CARTO</p>
+    <p id="radar-attrib">Radardaten: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer.com</a> · Karte: OpenStreetMap-Mitwirkende</p>
 
     <div class="section-label">11-Tage-Konsens-Vorhersage</div>
     <div id="daily-list"></div>
@@ -656,9 +665,10 @@ document.getElementById('reload-btn').addEventListener('click', function() {
   setTimeout(() => this.classList.remove('spin'), 800);
   loadWeather();
   loadRadar();
+  loadRainForecast();
 });
 
-window.addEventListener('online', function() { loadWeather(); loadRadar(); });
+window.addEventListener('online', function() { loadWeather(); loadRadar(); loadRainForecast(); });
 window.addEventListener('resize', function() { if (radarMap) radarMap.invalidateSize(); });
 loadWeather();
 
@@ -668,8 +678,46 @@ let radarMap = null, radarFrames = [], radarLayer = null, radarIdx = 0, radarTim
 function initRadarMap() {
   if (radarMap) return;
   radarMap = L.map('radar-map', { attributionControl: false, zoomControl: false }).setView([LAT, LON], 8);
-  L.tileLayer('https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 12 }).addTo(radarMap);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 12 }).addTo(radarMap);
   L.marker([LAT, LON]).addTo(radarMap);
+}
+
+async function loadRainForecast() {
+  const strip = document.getElementById('rain-forecast-strip');
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
+      `&minutely_15=precipitation&timezone=Europe%2FBerlin&forecast_days=1`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Kurzfrist-API-Fehler " + res.status);
+    const data = await res.json();
+    const m = data.minutely_15;
+    const now = new Date();
+    let startIdx = m.time.findIndex(t => new Date(t) >= now);
+    if (startIdx < 0) startIdx = 0;
+
+    const slots = [];
+    for (let i = startIdx; i < startIdx + 8 && i < m.time.length; i++) {
+      slots.push({ time: new Date(m.time[i]), val: m.precipitation[i] || 0 });
+    }
+    const maxVal = Math.max(...slots.map(s => s.val), 1);
+
+    strip.innerHTML = slots.map(s => {
+      const heightPct = Math.min((s.val / maxVal) * 100, 100);
+      return `<div class="rf-bar">
+        <div class="rf-track"><div class="rf-fill" style="height:${s.val > 0 ? Math.max(heightPct, 8) : 0}%;"></div></div>
+        <div class="rf-time">${s.time.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'})}</div>
+      </div>`;
+    }).join('');
+
+    const totalRain = slots.reduce((a, s) => a + s.val, 0);
+    document.getElementById('rain-forecast-label').textContent = totalRain > 0.1
+      ? 'Niederschlag nächste 2 Std. (15-Min-Prognose)'
+      : 'Nächste 2 Std.: kein Niederschlag erwartet (15-Min-Prognose)';
+  } catch (err) {
+    console.error('Kurzfrist-Regenprognose:', err);
+    strip.innerHTML = '';
+    document.getElementById('rain-forecast-label').textContent = 'Kurzfristprognose momentan nicht verfügbar.';
+  }
 }
 
 async function loadRadar() {
@@ -726,6 +774,7 @@ document.getElementById('radar-play').addEventListener('click', function() {
 });
 
 loadRadar();
+loadRainForecast();
 
 // --- Standort ändern ---
 const locOverlay = document.getElementById('loc-overlay');
@@ -788,6 +837,7 @@ function selectLocation(r) {
 
   locOverlay.classList.remove('show');
   loadWeather();
+  loadRainForecast();
 
   if (radarMap) {
     radarMap.setView([LAT, LON], 8);

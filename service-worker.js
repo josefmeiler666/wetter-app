@@ -37,7 +37,7 @@ self.addEventListener('fetch', function(event) {
     'geocoding-api.open-meteo.com',
     'api.rainviewer.com',
     'tilecache.rainviewer.com',
-    'basemaps.cartocdn.com',
+    'tile.openstreetmap.org',
     'cdnjs.cloudflare.com'
   ];
   if (passthroughHosts.includes(url.hostname)) {
