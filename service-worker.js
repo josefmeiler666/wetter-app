@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kempten-wetter-shell-v2';
+const CACHE_NAME = 'kempten-wetter-shell-v3';
 const SHELL_FILES = [
   './index.html',
   './manifest.json',
@@ -34,9 +34,10 @@ self.addEventListener('fetch', function(event) {
 
   const passthroughHosts = [
     'api.open-meteo.com',
+    'geocoding-api.open-meteo.com',
     'api.rainviewer.com',
     'tilecache.rainviewer.com',
-    'tile.openstreetmap.org',
+    'basemaps.cartocdn.com',
     'cdnjs.cloudflare.com'
   ];
   if (passthroughHosts.includes(url.hostname)) {

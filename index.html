@@ -17,9 +17,9 @@
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; padding: 0;
-    background: #f2f4f7;
+    background: #10151f;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: #1c2b3a;
+    color: #eef1f5;
   }
 
   #topbar {
@@ -51,22 +51,34 @@
   }
   #loc-overlay.show { display: flex; }
   #loc-sheet {
-    background: #f2f4f7; width: 100%; border-radius: 18px 18px 0 0;
+    background: #161f2c; width: 100%; border-radius: 18px 18px 0 0;
     padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
     max-height: 70vh; display: flex; flex-direction: column;
   }
   #loc-sheet h3 { margin: 0 0 12px; font-size: 16px; font-weight: 600; }
   #loc-input {
-    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #d5dae2;
-    font-size: 15px; background: white; box-sizing: border-box;
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #33465f;
+    font-size: 15px; background: #1f2a3a; color: #eef1f5; box-sizing: border-box;
   }
   #loc-results { margin-top: 10px; overflow-y: auto; }
-  .loc-result { padding: 12px 8px; border-bottom: 1px solid #e4e8ee; font-size: 14px; cursor: pointer; }
+  .loc-result { padding: 12px 8px; border-bottom: 1px solid #253244; font-size: 14px; cursor: pointer; }
   .loc-result:last-child { border-bottom: none; }
   .loc-result .lname { font-weight: 500; }
-  .loc-result .lregion { font-size: 12px; color: #6b7688; }
-  #loc-close { margin-top: 10px; background: none; border: none; color: #2b567f; font-size: 14px; padding: 8px; align-self: center; }
-  #loc-status { font-size: 13px; color: #6b7688; padding: 8px 4px; }
+  .loc-result .lregion { font-size: 12px; color: #8fa0b8; }
+  #loc-close { margin-top: 10px; background: none; border: none; color: #8fc4f5; font-size: 14px; padding: 8px; align-self: center; }
+  #loc-status { font-size: 13px; color: #8fa0b8; padding: 8px 4px; }
+
+  #day-overlay {
+    position: fixed; inset: 0; background: rgba(20,30,50,0.5);
+    display: none; align-items: flex-end; z-index: 100;
+  }
+  #day-overlay.show { display: flex; }
+  #day-sheet {
+    background: #161f2c; width: 100%; border-radius: 18px 18px 0 0;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    max-height: 75vh; display: flex; flex-direction: column;
+  }
+  #day-sheet h3 { margin: 0 0 12px; font-size: 16px; font-weight: 600; color: #eef1f5; }
 
   main { padding: 16px 14px 32px; max-width: 480px; margin: 0 auto; }
 
@@ -84,60 +96,69 @@
   #now-card .meta { display: flex; gap: 18px; margin-top: 14px; font-size: 12px; opacity: 0.85; }
   #now-card .meta span { display: flex; align-items: center; gap: 4px; }
 
-  .section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7688; margin: 20px 2px 8px; }
+  .section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #8fa0b8; margin: 20px 2px 8px; }
 
   #hourly-scroll { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
   #hourly-scroll::-webkit-scrollbar { display: none; }
-  .hour-chip { flex: 0 0 auto; background: white; border-radius: 12px; padding: 10px 12px; text-align: center; min-width: 56px; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
-  .hour-chip .t { font-size: 11px; color: #6b7688; margin-bottom: 4px; }
+  .hour-chip { flex: 0 0 auto; background: #182231; border-radius: 12px; padding: 10px 12px; text-align: center; min-width: 56px; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
+  .hour-chip .t { font-size: 11px; color: #8fa0b8; margin-bottom: 4px; }
   .hour-chip .v { font-size: 14px; font-weight: 500; margin-top: 4px; }
   .hour-chip .rain { font-size: 10px; color: #2b7fd1; margin-top: 2px; }
 
-  #daily-list { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
-  .day-row { display: flex; align-items: center; padding: 12px 14px; border-bottom: 1px solid #eef1f5; gap: 10px; }
+  #daily-list { background: #182231; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
+  .day-row { display: flex; align-items: center; padding: 12px 14px; border-bottom: 1px solid #253244; gap: 10px; }
   .day-row:last-child { border-bottom: none; }
   .day-row .dname { width: 40px; font-size: 14px; font-weight: 500; }
   .day-row .dicon { width: 26px; text-align: center; font-size: 17px; color: #f7b538; }
   .day-row .drain { width: 46px; font-size: 12px; color: #2b7fd1; text-align: right; }
   .day-row .drange { flex: 1; display: flex; align-items: center; gap: 8px; margin-left: 4px; }
-  .day-row .dmin, .day-row .dmax { font-size: 13px; color: #6b7688; width: 30px; }
-  .day-row .dmax { color: #1c2b3a; font-weight: 500; text-align: right; }
-  .bar-track { flex: 1; height: 4px; background: #eef1f5; border-radius: 2px; position: relative; }
+  .day-row .dmin, .day-row .dmax { font-size: 13px; color: #8fa0b8; width: 30px; }
+  .day-row .dmax { color: #eef1f5; font-weight: 500; text-align: right; }
+  .bar-track { flex: 1; height: 4px; background: #253244; border-radius: 2px; position: relative; }
   .bar-fill { position: absolute; top: 0; bottom: 0; background: linear-gradient(90deg, #6fb1e8, #f0a13c); border-radius: 2px; }
   .day-row .dspread { width: 14px; text-align: center; }
   .dspread .warn-dot { width: 6px; height: 6px; border-radius: 50%; background: #e0a53f; display: inline-block; }
 
-  #chart-card { background: white; border-radius: 16px; padding: 14px 10px 8px; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
+  #chart-card { background: #182231; border-radius: 16px; padding: 14px 10px 8px; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
   #chart-wrap { position: relative; height: 180px; }
   #chart-daylabels { display: flex; margin-top: 4px; }
-  #chart-daylabels span { flex: 1; text-align: center; font-size: 11px; color: #8892a0; }
+  #chart-daylabels span { flex: 1; text-align: center; font-size: 11px; color: #8fa0b8; }
 
-  #tips-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
-  .tip-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid #eef1f5; }
+  #day-sheet .dsh-close { margin-top: 6px; background: none; border: none; color: #8fc4f5; font-size: 14px; padding: 8px; align-self: center; }
+  #day-hourly-list { overflow-y: auto; margin-top: 4px; }
+  .dh-row { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid #253244; }
+  .dh-row:last-child { border-bottom: none; }
+  .dh-row .dht { width: 44px; font-size: 13px; color: #8fa0b8; }
+  .dh-row .dhicon { width: 24px; text-align: center; font-size: 16px; }
+  .dh-row .dhtemp { width: 44px; font-size: 14px; font-weight: 500; }
+  .dh-row .dhrain { font-size: 12px; color: #7fb3e8; }
+
+  #tips-card { background: #182231; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
+  .tip-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid #253244; }
   .tip-row:last-child { border-bottom: none; }
   .tip-row .ticon { font-size: 19px; width: 26px; text-align: center; flex: 0 0 auto; }
   .tip-row .ttext { font-size: 13.5px; line-height: 1.4; }
   .tip-row .ttext b { font-weight: 500; }
-  #tips-empty { padding: 16px 14px; font-size: 13px; color: #6b7688; text-align: center; }
+  #tips-empty { padding: 16px 14px; font-size: 13px; color: #8fa0b8; text-align: center; }
 
-  #radar-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
-  #radar-map { width: 100%; height: 260px; background: #dfe6ee; }
-  #radar-controls { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid #eef1f5; }
+  #radar-card { background: #182231; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
+  #radar-map { width: 100%; height: 260px; background: #1a2432; }
+  #radar-controls { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid #253244; }
   #radar-play {
     background: #1e3a5f; color: white; border: none; width: 30px; height: 30px;
     border-radius: 50%; font-size: 13px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
   }
-  #radar-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 3px; background: #eef1f5; border-radius: 2px; outline: none; }
+  #radar-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 3px; background: #253244; border-radius: 2px; outline: none; }
   #radar-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #1e3a5f; cursor: pointer; }
-  #radar-time { font-size: 11px; color: #6b7688; min-width: 56px; text-align: right; flex: 0 0 auto; }
-  #radar-attrib { font-size: 10px; color: #9aa4b2; padding: 0 14px 10px; }
+  #radar-time { font-size: 11px; color: #8fa0b8; min-width: 56px; text-align: right; flex: 0 0 auto; }
+  #radar-attrib { font-size: 10px; color: #8fa0b8; padding: 0 14px 10px; }
 
-  #sources-card { background: white; border-radius: 14px; padding: 14px 16px; margin-top: 16px; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
-  #sources-card p { margin: 0; font-size: 12px; color: #6b7688; line-height: 1.6; }
-  #sources-card .model-chip { display: inline-block; background: #eef4fb; color: #2b567f; font-size: 11px; padding: 2px 8px; border-radius: 20px; margin: 2px 3px 0 0; }
-  #legend { font-size: 11px; color: #8892a0; margin-top: 8px; display: flex; align-items: center; gap: 5px; }
+  #sources-card { background: #182231; border-radius: 14px; padding: 14px 16px; margin-top: 16px; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
+  #sources-card p { margin: 0; font-size: 12px; color: #8fa0b8; line-height: 1.6; }
+  #sources-card .model-chip { display: inline-block; background: #1d3a55; color: #8fc4f5; font-size: 11px; padding: 2px 8px; border-radius: 20px; margin: 2px 3px 0 0; }
+  #legend { font-size: 11px; color: #8fa0b8; margin-top: 8px; display: flex; align-items: center; gap: 5px; }
 
-  #status { text-align: center; padding: 60px 20px; color: #6b7688; font-size: 14px; }
+  #status { text-align: center; padding: 60px 20px; color: #8fa0b8; font-size: 14px; }
   #status.hide { display: none; }
   main.loading #content { display: none; }
   #content { display: block; }
@@ -162,6 +183,14 @@
     <div id="loc-status"></div>
     <div id="loc-results"></div>
     <button id="loc-close">Abbrechen</button>
+  </div>
+</div>
+
+<div id="day-overlay">
+  <div id="day-sheet">
+    <h3 id="day-sheet-title">Tagesverlauf</h3>
+    <div id="day-hourly-list"></div>
+    <button id="day-close" class="dsh-close">Schließen</button>
   </div>
 </div>
 
@@ -203,7 +232,7 @@
         <span id="radar-time">&mdash;</span>
       </div>
     </div>
-    <p id="radar-attrib">Radardaten: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer.com</a></p>
+    <p id="radar-attrib">Radardaten: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer.com</a> · Karte: OpenStreetMap-Mitwirkende, CARTO</p>
 
     <div class="section-label">11-Tage-Konsens-Vorhersage</div>
     <div id="daily-list"></div>
@@ -310,6 +339,7 @@ async function loadWeather() {
 
     status.classList.add('hide');
     main.classList.remove('loading');
+    if (radarMap) setTimeout(() => radarMap.invalidateSize(), 150);
   } catch (err) {
     console.error(err);
     status.textContent = (navigator.onLine
@@ -365,7 +395,10 @@ function renderHourly(data) {
   }
 }
 
+let lastWeatherData = null;
+
 function renderDaily(data) {
+  lastWeatherData = data;
   const daily = data.daily;
   const maxKeys = MODELS.map(m => `temperature_2m_max_${m}`);
   const minKeys = MODELS.map(m => `temperature_2m_min_${m}`);
@@ -400,6 +433,7 @@ function renderDaily(data) {
 
     const row = document.createElement('div');
     row.className = 'day-row';
+    row.style.cursor = 'pointer';
     row.innerHTML = `
       <div class="dname">${dname}</div>
       <div class="dicon">${icon}</div>
@@ -409,6 +443,7 @@ function renderDaily(data) {
       <div class="dmax">${tMax !== null ? Math.round(tMax) + '°' : '–'}</div>
       <div class="dspread">${tSpread >= 3 ? '<span class="warn-dot"></span>' : ''}</div>
     `;
+    row.addEventListener('click', () => openDayDetail(i, dname));
     list.appendChild(row);
   }
 }
@@ -482,12 +517,12 @@ function renderTempChart(data) {
       },
       scales: {
         x: {
-          ticks: { maxTicksLimit: 8, font: { size: 10 }, color: '#8892a0' },
+          ticks: { maxTicksLimit: 8, font: { size: 10 }, color: '#8fa0b8' },
           grid: { display: false }
         },
         y: {
-          ticks: { font: { size: 10 }, color: '#8892a0', callback: (v) => v + '°' },
-          grid: { color: '#eef1f5' }
+          ticks: { font: { size: 10 }, color: '#8fa0b8', callback: (v) => v + '°' },
+          grid: { color: '#253244' }
         }
       }
     }
@@ -565,6 +600,57 @@ function renderSources() {
     `Kombiniert aus ${MODELS.length} Wettermodellen für Kempten (Allgäu):<br>${chips}`;
 }
 
+function openDayDetail(dayIndex, dayLabel) {
+  if (!lastWeatherData) return;
+  const hourly = lastWeatherData.hourly;
+  const tempKeys = MODELS.map(m => `temperature_2m_${m}`);
+  const codeKeys = MODELS.map(m => `weathercode_${m}`);
+
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + dayIndex);
+  const targetDateStr = targetDate.toDateString();
+
+  const list = document.getElementById('day-hourly-list');
+  list.innerHTML = '';
+
+  let rowsAdded = 0;
+  for (let i = 0; i < hourly.time.length; i++) {
+    const t = new Date(hourly.time[i]);
+    if (t.toDateString() !== targetDateStr) continue;
+    if (t.getHours() % 2 !== 0) continue; // nur 2-Stunden-Schritte
+
+    const temp = avg(tempKeys.map(k => hourly[k] ? hourly[k][i] : null));
+    const rain = hourly.precipitation_probability ? hourly.precipitation_probability[i] : null;
+    const code = mode(codeKeys.map(k => hourly[k] ? hourly[k][i] : null));
+    const [, icon] = wmoInfo(code);
+
+    const row = document.createElement('div');
+    row.className = 'dh-row';
+    row.innerHTML = `
+      <div class="dht">${t.toLocaleTimeString('de-DE', {hour:'2-digit'})}:00</div>
+      <div class="dhicon">${icon}</div>
+      <div class="dhtemp">${temp !== null ? Math.round(temp) + '°' : '–'}</div>
+      <div class="dhrain">${rain !== null && rain > 10 ? '&#128167; ' + Math.round(rain) + '%' : ''}</div>
+    `;
+    list.appendChild(row);
+    rowsAdded++;
+  }
+
+  if (!rowsAdded) {
+    list.innerHTML = '<div style="padding:16px 4px; font-size:13px; color:#8fa0b8;">Für diesen Tag liegen keine stündlichen Daten vor (nur bei den ersten Tagen verfügbar).</div>';
+  }
+
+  document.getElementById('day-sheet-title').textContent = dayLabel + ' – Tagesverlauf';
+  document.getElementById('day-overlay').classList.add('show');
+}
+
+document.getElementById('day-close').addEventListener('click', function() {
+  document.getElementById('day-overlay').classList.remove('show');
+});
+document.getElementById('day-overlay').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('show');
+});
+
 document.getElementById('reload-btn').addEventListener('click', function() {
   this.classList.add('spin');
   setTimeout(() => this.classList.remove('spin'), 800);
@@ -573,6 +659,7 @@ document.getElementById('reload-btn').addEventListener('click', function() {
 });
 
 window.addEventListener('online', function() { loadWeather(); loadRadar(); });
+window.addEventListener('resize', function() { if (radarMap) radarMap.invalidateSize(); });
 loadWeather();
 
 // --- Regenradar (RainViewer) ---
@@ -581,7 +668,7 @@ let radarMap = null, radarFrames = [], radarLayer = null, radarIdx = 0, radarTim
 function initRadarMap() {
   if (radarMap) return;
   radarMap = L.map('radar-map', { attributionControl: false, zoomControl: false }).setView([LAT, LON], 8);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 12 }).addTo(radarMap);
+  L.tileLayer('https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 12 }).addTo(radarMap);
   L.marker([LAT, LON]).addTo(radarMap);
 }
 
@@ -606,6 +693,7 @@ async function loadRadar() {
 
 function showRadarFrame(idx) {
   if (!radarFrames[idx]) return;
+  if (radarMap) radarMap.invalidateSize();
   const frame = radarFrames[idx];
   if (radarLayer) radarMap.removeLayer(radarLayer);
   radarLayer = L.tileLayer(`https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, { opacity: 0.75, maxZoom: 12 });
