@@ -612,8 +612,11 @@ function renderSources() {
 function openDayDetail(dayIndex, dayLabel) {
   if (!lastWeatherData) return;
   const hourly = lastWeatherData.hourly;
+  const daily = lastWeatherData.daily;
   const tempKeys = MODELS.map(m => `temperature_2m_${m}`);
   const codeKeys = MODELS.map(m => `weathercode_${m}`);
+  const maxKeys = MODELS.map(m => `temperature_2m_max_${m}`);
+  const minKeys = MODELS.map(m => `temperature_2m_min_${m}`);
 
   const targetDate = new Date();
   targetDate.setDate(targetDate.getDate() + dayIndex);
@@ -621,6 +624,28 @@ function openDayDetail(dayIndex, dayLabel) {
 
   const list = document.getElementById('day-hourly-list');
   list.innerHTML = '';
+
+  // Modell-Vergleich, falls die Modelle an diesem Tag deutlich voneinander abweichen
+  const tSpread = Math.max(
+    spread(maxKeys.map(k => daily[k] ? daily[k][dayIndex] : null)),
+    spread(minKeys.map(k => daily[k] ? daily[k][dayIndex] : null))
+  );
+  if (tSpread >= 3) {
+    const compareDiv = document.createElement('div');
+    compareDiv.style.cssText = 'margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #253244;';
+    let rows = '<div style="font-size:12px; color:#e0a53f; margin-bottom:8px;">⚠ Modelle weichen an diesem Tag ab &ndash; im Detail:</div>';
+    MODELS.forEach(m => {
+      const mx = daily[`temperature_2m_max_${m}`] ? daily[`temperature_2m_max_${m}`][dayIndex] : null;
+      const mn = daily[`temperature_2m_min_${m}`] ? daily[`temperature_2m_min_${m}`][dayIndex] : null;
+      if (mx === null && mn === null) return;
+      rows += `<div style="display:flex; justify-content:space-between; font-size:13px; padding:4px 0;">
+        <span style="color:#8fa0b8;">${MODEL_LABELS[m]}</span>
+        <span>${mn !== null ? Math.round(mn) + '°' : '–'} / ${mx !== null ? Math.round(mx) + '°' : '–'}</span>
+      </div>`;
+    });
+    compareDiv.innerHTML = rows;
+    list.appendChild(compareDiv);
+  }
 
   let rowsAdded = 0;
   for (let i = 0; i < hourly.time.length; i++) {
@@ -646,7 +671,10 @@ function openDayDetail(dayIndex, dayLabel) {
   }
 
   if (!rowsAdded) {
-    list.innerHTML = '<div style="padding:16px 4px; font-size:13px; color:#8fa0b8;">Für diesen Tag liegen keine stündlichen Daten vor (nur bei den ersten Tagen verfügbar).</div>';
+    const emptyMsg = document.createElement('div');
+    emptyMsg.style.cssText = 'padding:16px 4px; font-size:13px; color:#8fa0b8;';
+    emptyMsg.textContent = 'Für diesen Tag liegen keine stündlichen Daten vor (nur bei den ersten Tagen verfügbar).';
+    list.appendChild(emptyMsg);
   }
 
   document.getElementById('day-sheet-title').textContent = dayLabel + ' – Tagesverlauf';
@@ -744,7 +772,7 @@ function showRadarFrame(idx) {
   if (radarMap) radarMap.invalidateSize();
   const frame = radarFrames[idx];
   if (radarLayer) radarMap.removeLayer(radarLayer);
-  radarLayer = L.tileLayer(`https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, { opacity: 0.75, maxZoom: 12 });
+  radarLayer = L.tileLayer(`https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, { opacity: 0.75, maxZoom: 12, maxNativeZoom: 7 });
   radarLayer.addTo(radarMap);
 
   const t = new Date(frame.time * 1000);
