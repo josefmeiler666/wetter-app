@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1e3a5f">
+<title>Kempten Wetter</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kempten Wetter">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #f2f4f7;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #1c2b3a;
+  }
+
+  #topbar {
+    position: sticky; top: 0;
+    padding-top: env(safe-area-inset-top);
+    background: linear-gradient(180deg, #1e3a5f, #24466f);
+    color: #f5f7fa;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  #topbar-inner {
+    height: 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px;
+  }
+  #topbar .title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  #topbar .dot { width: 7px; height: 7px; border-radius: 50%; background: #f7b538; }
+  #reload-btn {
+    background: rgba(255,255,255,0.14); border: none; color: #f5f7fa;
+    width: 32px; height: 32px; border-radius: 8px; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #reload-btn.spin { animation: spin 0.8s linear; }
+  @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+  main { padding: 16px 14px 32px; max-width: 480px; margin: 0 auto; }
+
+  #now-card {
+    background: linear-gradient(160deg, #2b567f, #1e3a5f);
+    color: #f5f7fa;
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  #now-card .place { font-size: 13px; opacity: 0.75; margin: 0 0 2px; }
+  #now-card .temp-row { display: flex; align-items: baseline; gap: 10px; }
+  #now-card .temp { font-size: 42px; font-weight: 500; }
+  #now-card .cond { font-size: 14px; opacity: 0.9; }
+  #now-card .meta { display: flex; gap: 18px; margin-top: 14px; font-size: 12px; opacity: 0.85; }
+  #now-card .meta span { display: flex; align-items: center; gap: 4px; }
+
+  .section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7688; margin: 20px 2px 8px; }
+
+  #hourly-scroll { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
+  #hourly-scroll::-webkit-scrollbar { display: none; }
+  .hour-chip { flex: 0 0 auto; background: white; border-radius: 12px; padding: 10px 12px; text-align: center; min-width: 56px; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
+  .hour-chip .t { font-size: 11px; color: #6b7688; margin-bottom: 4px; }
+  .hour-chip .v { font-size: 14px; font-weight: 500; margin-top: 4px; }
+  .hour-chip .rain { font-size: 10px; color: #2b7fd1; margin-top: 2px; }
+
+  #daily-list { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
+  .day-row { display: flex; align-items: center; padding: 12px 14px; border-bottom: 1px solid #eef1f5; gap: 10px; }
+  .day-row:last-child { border-bottom: none; }
+  .day-row .dname { width: 40px; font-size: 14px; font-weight: 500; }
+  .day-row .dicon { width: 26px; text-align: center; font-size: 17px; color: #f7b538; }
+  .day-row .drain { width: 46px; font-size: 12px; color: #2b7fd1; text-align: right; }
+  .day-row .drange { flex: 1; display: flex; align-items: center; gap: 8px; margin-left: 4px; }
+  .day-row .dmin, .day-row .dmax { font-size: 13px; color: #6b7688; width: 30px; }
+  .day-row .dmax { color: #1c2b3a; font-weight: 500; text-align: right; }
+  .bar-track { flex: 1; height: 4px; background: #eef1f5; border-radius: 2px; position: relative; }
+  .bar-fill { position: absolute; top: 0; bottom: 0; background: linear-gradient(90deg, #6fb1e8, #f0a13c); border-radius: 2px; }
+  .day-row .dspread { width: 14px; text-align: center; }
+  .dspread .warn-dot { width: 6px; height: 6px; border-radius: 50%; background: #e0a53f; display: inline-block; }
+
+  #sources-card { background: white; border-radius: 14px; padding: 14px 16px; margin-top: 16px; box-shadow: 0 1px 3px rgba(20,30,50,0.06); }
+  #sources-card p { margin: 0; font-size: 12px; color: #6b7688; line-height: 1.6; }
+  #sources-card .model-chip { display: inline-block; background: #eef4fb; color: #2b567f; font-size: 11px; padding: 2px 8px; border-radius: 20px; margin: 2px 3px 0 0; }
+  #legend { font-size: 11px; color: #8892a0; margin-top: 8px; display: flex; align-items: center; gap: 5px; }
+
+  #status { text-align: center; padding: 60px 20px; color: #6b7688; font-size: 14px; }
+  #status.hide { display: none; }
+  main.loading #content { display: none; }
+  #content { display: block; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div id="topbar-inner">
+    <div class="title"><span class="dot"></span>Kempten Wetter</div>
+    <button id="reload-btn" aria-label="Aktualisieren">&#8635;</button>
+  </div>
+</div>
+
+<main class="loading">
+  <div id="status">Lade Vorhersagen aus mehreren Wettermodellen&hellip;</div>
+
+  <div id="content">
+    <div id="now-card">
+      <p class="place">Kempten (Allgäu)</p>
+      <div class="temp-row">
+        <span class="temp" id="now-temp">&mdash;</span>
+        <span class="cond" id="now-cond"></span>
+      </div>
+      <div class="meta">
+        <span id="now-rain"></span>
+        <span id="now-wind"></span>
+        <span id="now-updated"></span>
+      </div>
+    </div>
+
+    <div class="section-label">Nächste Stunden</div>
+    <div id="hourly-scroll"></div>
+
+    <div class="section-label">11-Tage-Konsens-Vorhersage</div>
+    <div id="daily-list"></div>
+
+    <div id="sources-card">
+      <p id="sources-text"></p>
+      <div id="legend"><span class="warn-dot" style="width:6px;height:6px;border-radius:50%;background:#e0a53f;display:inline-block;"></span> Modelle weichen an diesem Tag deutlich voneinander ab</div>
+    </div>
+  </div>
+</main>
+
+<script>
+const LAT = 47.7266, LON = 10.3161;
+const MODELS = ["icon_seamless", "ecmwf_ifs025", "gfs_seamless", "gem_seamless"];
+const MODEL_LABELS = { icon_seamless: "DWD ICON", ecmwf_ifs025: "ECMWF", gfs_seamless: "GFS (USA)", gem_seamless: "GEM (Kanada)" };
+
+const WMO = {
+  0: ["Klar", "\u2600"], 1: ["Meist klar", "\u{1F324}"], 2: ["Teilweise bewölkt", "\u26C5"], 3: ["Bedeckt", "\u2601"],
+  45: ["Nebel", "\u{1F32B}"], 48: ["Reifnebel", "\u{1F32B}"],
+  51: ["Leichter Niesel", "\u{1F327}"], 53: ["Niesel", "\u{1F327}"], 55: ["Starker Niesel", "\u{1F327}"],
+  61: ["Leichter Regen", "\u{1F327}"], 63: ["Regen", "\u{1F327}"], 65: ["Starker Regen", "\u{1F327}"],
+  71: ["Leichter Schnee", "\u2744"], 73: ["Schnee", "\u2744"], 75: ["Starker Schnee", "\u2744"],
+  80: ["Regenschauer", "\u{1F326}"], 81: ["Schauer", "\u{1F326}"], 82: ["Heftige Schauer", "\u26C8"],
+  95: ["Gewitter", "\u26C8"], 96: ["Gewitter mit Hagel", "\u26C8"], 99: ["Schweres Gewitter", "\u26C8"]
+};
+function wmoInfo(code) { return WMO[code] || ["", "\u2601"]; }
+
+const DAYNAMES = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+
+function avg(arr) {
+  const v = arr.filter(x => x !== null && x !== undefined && !isNaN(x));
+  if (!v.length) return null;
+  return v.reduce((a,b) => a+b, 0) / v.length;
+}
+function maxOf(arr) {
+  const v = arr.filter(x => x !== null && x !== undefined && !isNaN(x));
+  if (!v.length) return null;
+  return Math.max(...v);
+}
+function mode(arr) {
+  const v = arr.filter(x => x !== null && x !== undefined);
+  if (!v.length) return null;
+  const counts = {};
+  v.forEach(x => counts[x] = (counts[x]||0)+1);
+  return Object.keys(counts).sort((a,b) => counts[b]-counts[a])[0] | 0;
+}
+function spread(arr) {
+  const v = arr.filter(x => x !== null && x !== undefined && !isNaN(x));
+  if (v.length < 2) return 0;
+  return Math.max(...v) - Math.min(...v);
+}
+
+async function loadWeather() {
+  const main = document.querySelector('main');
+  const status = document.getElementById('status');
+  main.classList.add('loading');
+  status.textContent = 'Lade Vorhersagen aus mehreren Wettermodellen…';
+  status.classList.remove('hide');
+
+  try {
+    const dailyVars = "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weathercode,windspeed_10m_max";
+    const hourlyVars = "temperature_2m,precipitation_probability,weathercode";
+    const modelsParam = MODELS.join(",");
+
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
+      `&daily=${dailyVars}&hourly=${hourlyVars}&current_weather=true` +
+      `&timezone=Europe%2FBerlin&forecast_days=11&models=${modelsParam}`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("API-Fehler " + res.status);
+    const data = await res.json();
+
+    renderNow(data);
+    renderHourly(data);
+    renderDaily(data);
+    renderSources();
+
+    status.classList.add('hide');
+    main.classList.remove('loading');
+  } catch (err) {
+    status.textContent = navigator.onLine
+      ? "Daten konnten nicht geladen werden. Bitte erneut versuchen."
+      : "Keine Internetverbindung. Bitte erneut versuchen, sobald du wieder online bist.";
+  }
+}
+
+function renderNow(data) {
+  const cw = data.current_weather;
+  document.getElementById('now-temp').textContent = Math.round(cw.temperature) + "°C";
+  const [label] = wmoInfo(cw.weathercode);
+  document.getElementById('now-cond').textContent = label;
+  document.getElementById('now-wind').innerHTML = `&#128168; ${Math.round(cw.windspeed)} km/h`;
+
+  const hourly = data.hourly;
+  const nowIdx = hourly.time.findIndex(t => t === cw.time.slice(0,14) + "00") ;
+  let rainProb = null;
+  if (nowIdx >= 0) {
+    const keys = MODELS.map(m => `precipitation_probability_${m}`);
+    rainProb = maxOf(keys.map(k => hourly[k] ? hourly[k][nowIdx] : null));
+  }
+  document.getElementById('now-rain').innerHTML = rainProb !== null ? `&#128167; ${Math.round(rainProb)}%` : '';
+
+  const updated = new Date();
+  document.getElementById('now-updated').textContent = "Aktualisiert " + updated.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+}
+
+function renderHourly(data) {
+  const hourly = data.hourly;
+  const tempKeys = MODELS.map(m => `temperature_2m_${m}`);
+  const rainKeys = MODELS.map(m => `precipitation_probability_${m}`);
+  const now = new Date();
+  const container = document.getElementById('hourly-scroll');
+  container.innerHTML = '';
+
+  let startIdx = hourly.time.findIndex(t => new Date(t) >= now);
+  if (startIdx < 0) startIdx = 0;
+
+  for (let i = startIdx; i < startIdx + 12 && i < hourly.time.length; i++) {
+    const t = new Date(hourly.time[i]);
+    const temp = avg(tempKeys.map(k => hourly[k] ? hourly[k][i] : null));
+    const rain = maxOf(rainKeys.map(k => hourly[k] ? hourly[k][i] : null));
+
+    const chip = document.createElement('div');
+    chip.className = 'hour-chip';
+    chip.innerHTML = `
+      <div class="t">${t.toLocaleTimeString('de-DE', {hour:'2-digit'})}</div>
+      <div class="v">${temp !== null ? Math.round(temp) + '°' : '–'}</div>
+      <div class="rain">${rain !== null && rain > 10 ? '&#128167; ' + Math.round(rain) + '%' : ''}</div>
+    `;
+    container.appendChild(chip);
+  }
+}
+
+function renderDaily(data) {
+  const daily = data.daily;
+  const maxKeys = MODELS.map(m => `temperature_2m_max_${m}`);
+  const minKeys = MODELS.map(m => `temperature_2m_min_${m}`);
+  const rainProbKeys = MODELS.map(m => `precipitation_probability_max_${m}`);
+  const codeKeys = MODELS.map(m => `weathercode_${m}`);
+
+  const allMax = [], allMin = [];
+  for (let i = 0; i < daily.time.length; i++) {
+    allMax.push(avg(maxKeys.map(k => daily[k] ? daily[k][i] : null)));
+    allMin.push(avg(minKeys.map(k => daily[k] ? daily[k][i] : null)));
+  }
+  const globalMin = Math.min(...allMin.filter(v => v !== null));
+  const globalMax = Math.max(...allMax.filter(v => v !== null));
+  const range = Math.max(globalMax - globalMin, 1);
+
+  const list = document.getElementById('daily-list');
+  list.innerHTML = '';
+
+  for (let i = 0; i < daily.time.length; i++) {
+    const date = new Date(daily.time[i] + "T12:00:00");
+    const dname = i === 0 ? 'Heute' : DAYNAMES[date.getDay()];
+
+    const tMax = allMax[i];
+    const tMin = allMin[i];
+    const rainProb = maxOf(rainProbKeys.map(k => daily[k] ? daily[k][i] : null));
+    const code = mode(codeKeys.map(k => daily[k] ? daily[k][i] : null));
+    const tSpread = Math.max(spread(maxKeys.map(k => daily[k] ? daily[k][i] : null)), spread(minKeys.map(k => daily[k] ? daily[k][i] : null)));
+
+    const [, icon] = wmoInfo(code);
+
+    const leftPct = ((tMin - globalMin) / range) * 100;
+    const widthPct = ((tMax - tMin) / range) * 100;
+
+    const row = document.createElement('div');
+    row.className = 'day-row';
+    row.innerHTML = `
+      <div class="dname">${dname}</div>
+      <div class="dicon">${icon}</div>
+      <div class="drain">${rainProb !== null && rainProb > 5 ? Math.round(rainProb) + '%' : ''}</div>
+      <div class="dmin">${tMin !== null ? Math.round(tMin) + '°' : '–'}</div>
+      <div class="drange"><div class="bar-track"><div class="bar-fill" style="left:${leftPct}%;width:${widthPct}%;"></div></div></div>
+      <div class="dmax">${tMax !== null ? Math.round(tMax) + '°' : '–'}</div>
+      <div class="dspread">${tSpread >= 3 ? '<span class="warn-dot"></span>' : ''}</div>
+    `;
+    list.appendChild(row);
+  }
+}
+
+function renderSources() {
+  const chips = MODELS.map(m => `<span class="model-chip">${MODEL_LABELS[m]}</span>`).join('');
+  document.getElementById('sources-text').innerHTML =
+    `Kombiniert aus ${MODELS.length} Wettermodellen für Kempten (Allgäu):<br>${chips}`;
+}
+
+document.getElementById('reload-btn').addEventListener('click', function() {
+  this.classList.add('spin');
+  setTimeout(() => this.classList.remove('spin'), 800);
+  loadWeather();
+});
+
+window.addEventListener('online', loadWeather);
+loadWeather();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('service-worker.js').catch(function(){});
+  });
+}
+</script>
+
+</body>
+</html>
