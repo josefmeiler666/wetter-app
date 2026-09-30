@@ -138,6 +138,7 @@
   .tip-row:last-child { border-bottom: none; }
   .tip-row .ticon { font-size: 19px; width: 26px; text-align: center; flex: 0 0 auto; }
   .tip-row .ttext { font-size: 13.5px; line-height: 1.4; }
+  .tip-beer { display: inline-block; margin-top: 3px; font-size: 12px; color: #8fa0b8; font-style: italic; }
   .tip-row .ttext b { font-weight: 500; }
   #tips-empty { padding: 16px 14px; font-size: 13px; color: #8fa0b8; text-align: center; }
 
@@ -698,27 +699,27 @@ function renderTips(data) {
     const wind = maxOf(windKeys.map(k => daily[k] ? daily[k][i] : null));
 
     if (uv !== null && uv >= 6) {
-      tips.push(["&#9728;", `Hoher UV-Index (${Math.round(uv)}) &ndash; <b>Sonnencreme auftragen</b>, Mittagssonne meiden.`]);
+      tips.push(["&#9728;", `Hoher UV-Index (${Math.round(uv)}) &ndash; <b>Sonnencreme auftragen</b>, Mittagssonne meiden.<br><span class="tip-beer">&#127866; Danach ein kühles Bier im Schatten hat man sich verdient.</span>`]);
     } else if (uv !== null && uv >= 3) {
-      tips.push(["&#9728;", `Mäßiger UV-Index (${Math.round(uv)}) &ndash; <b>Sonnencreme</b> ist sinnvoll.`]);
+      tips.push(["&#9728;", `Mäßiger UV-Index (${Math.round(uv)}) &ndash; <b>Sonnencreme</b> ist sinnvoll.<br><span class="tip-beer">&#127866; Ein Bier im Schatten schadet trotzdem nicht.</span>`]);
     }
 
     if (rain !== null && rain >= 50) {
-      tips.push(["&#127752;", `Regenwahrscheinlichkeit ${Math.round(rain)}% &ndash; <b>Regenschirm mitnehmen</b>.`]);
+      tips.push(["&#127752;", `Regenwahrscheinlichkeit ${Math.round(rain)}% &ndash; <b>Regenschirm mitnehmen</b>.<br><span class="tip-beer">&#127866; Sonst lieber ins Wirtshaus flüchten &ndash; dort tropft nur das Bier.</span>`]);
     } else if (rain !== null && rain >= 25) {
-      tips.push(["&#127752;", `Vereinzelt Regen möglich (${Math.round(rain)}%) &ndash; Schirm sicherheitshalber einpacken.`]);
+      tips.push(["&#127752;", `Vereinzelt Regen möglich (${Math.round(rain)}%) &ndash; Schirm sicherheitshalber einpacken.<br><span class="tip-beer">&#127866; Notfalls tropft drinnen wenigstens nur das Bier.</span>`]);
     }
 
     if (tMinToday !== null && tMinToday <= 2) {
-      tips.push(["&#10052;", `Frost heute früh (${Math.round(tMinToday)}°C) &ndash; <b>Autoscheiben kratzen</b> einplanen.`]);
+      tips.push(["&#10052;", `Frost heute früh (${Math.round(tMinToday)}°C) &ndash; <b>Autoscheiben kratzen</b> einplanen.<br><span class="tip-beer">&#127866; Danach gibt's als Belohnung ein Bier.</span>`]);
     }
 
     if (wind !== null && wind >= 50) {
-      tips.push(["&#128168;", `Starker Wind bis ${Math.round(wind)} km/h &ndash; lose Gegenstände sichern.`]);
+      tips.push(["&#128168;", `Starker Wind bis ${Math.round(wind)} km/h &ndash; lose Gegenstände sichern.<br><span class="tip-beer">&#127866; Bierglas am Gartentisch auch gut festhalten.</span>`]);
     }
 
     if (tMax !== null && tMax >= 28) {
-      tips.push(["&#128167;", `Hitze bis ${Math.round(tMax)}°C &ndash; ausreichend trinken, Anstrengung meiden.`]);
+      tips.push(["&#128167;", `Hitze bis ${Math.round(tMax)}°C &ndash; ausreichend trinken, Anstrengung meiden.<br><span class="tip-beer">&#127866; Bier zählt nicht als Wasserersatz, schmeckt aber trotzdem.</span>`]);
     }
   }
 
