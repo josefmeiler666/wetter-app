@@ -221,6 +221,9 @@
     <div class="section-label">Nächste Stunden</div>
     <div id="hourly-scroll"></div>
 
+    <div class="section-label">Für heute</div>
+    <div id="tips-card"></div>
+
     <div class="section-label">Temperaturverlauf</div>
     <div class="chart-card">
       <div class="chart-wrap"><canvas id="temp-chart"></canvas></div>
@@ -233,8 +236,13 @@
       <div class="chart-daylabels" id="rain-chart-daylabels"></div>
     </div>
 
-    <div class="section-label">Für heute &amp; morgen</div>
-    <div id="tips-card"></div>
+    <div class="section-label">11-Tage-Konsens-Vorhersage</div>
+    <div id="daily-list"></div>
+
+    <div id="sources-card">
+      <p id="sources-text"></p>
+      <div id="legend"><span class="warn-dot" style="width:6px;height:6px;border-radius:50%;background:#e0a53f;display:inline-block;"></span> Modelle weichen an diesem Tag deutlich voneinander ab</div>
+    </div>
 
     <div class="section-label">Regenradar</div>
     <p id="rain-forecast-label">Niederschlag nächste 2 Std. (15-Min-Prognose)</p>
@@ -248,14 +256,6 @@
       </div>
     </div>
     <p id="radar-attrib">Radardaten (nur Vergangenheit): <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer.com</a> · Karte: OpenStreetMap-Mitwirkende</p>
-
-    <div class="section-label">11-Tage-Konsens-Vorhersage</div>
-    <div id="daily-list"></div>
-
-    <div id="sources-card">
-      <p id="sources-text"></p>
-      <div id="legend"><span class="warn-dot" style="width:6px;height:6px;border-radius:50%;background:#e0a53f;display:inline-block;"></span> Modelle weichen an diesem Tag deutlich voneinander ab</div>
-    </div>
   </div>
 </main>
 
@@ -495,7 +495,7 @@ function makeDayNightPlugin(isDayArr) {
           while (j < isDayArr.length && isDayArr[j]) j++;
           const xStart = xScale.getPixelForValue(i) - half;
           const xEnd = xScale.getPixelForValue(j - 1) + half;
-          ctx.fillStyle = 'rgba(255,255,255,0.055)';
+          ctx.fillStyle = 'rgba(255,255,255,0.11)';
           ctx.fillRect(xStart, chartArea.top, xEnd - xStart, chartArea.bottom - chartArea.top);
           i = j;
         } else {
@@ -719,18 +719,6 @@ function renderTips(data) {
 
     if (tMax !== null && tMax >= 28) {
       tips.push(["&#128167;", `Hitze bis ${Math.round(tMax)}°C &ndash; ausreichend trinken, Anstrengung meiden.`]);
-    }
-  }
-
-  if (daily.time.length > 1) {
-    const i = 1; // morgen
-    const tMinTom = dayVal(minKeys, i);
-    const snow = daily.snowfall_sum ? daily.snowfall_sum[i] : null;
-
-    if (snow !== null && snow > 0.5) {
-      tips.push(["&#10052;", `Schneefall über Nacht erwartet &ndash; <b>morgen früh Gehweg/Auto freischaufeln</b> einplanen.`]);
-    } else if (tMinTom !== null && tMinTom <= 0) {
-      tips.push(["&#10052;", `Frost in der Nacht (bis ${Math.round(tMinTom)}°C) &ndash; morgen früh vermutlich <b>Autoscheiben kratzen</b>.`]);
     }
   }
 
