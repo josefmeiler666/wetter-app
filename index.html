@@ -736,7 +736,7 @@ function renderTips(data) {
 function renderSources() {
   const chips = MODELS.map(m => `<span class="model-chip">${MODEL_LABELS[m]}</span>`).join('');
   document.getElementById('sources-text').innerHTML =
-    `Kombiniert aus ${MODELS.length} Wettermodellen für Kempten (Allgäu):<br>${chips}`;
+    `Kombiniert aus ${MODELS.length} Wettermodellen für ${PLACE_NAME}:<br>${chips}`;
 }
 
 function openDayDetail(dayIndex, dayLabel) {
