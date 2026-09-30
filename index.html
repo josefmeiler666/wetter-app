@@ -328,7 +328,7 @@ async function loadWeather() {
       `&daily=${dailyCore}&hourly=${hourlyCore}&current_weather=true` +
       `&timezone=Europe%2FBerlin&forecast_days=11&models=${modelsParam}`;
 
-    const dailyExtra = "precipitation_probability_max,uv_index_max,snowfall_sum";
+    const dailyExtra = "precipitation_probability_max,uv_index_max,snowfall_sum,sunrise,sunset";
     const hourlyExtra = "precipitation_probability";
     const extraUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
       `&daily=${dailyExtra}&hourly=${hourlyExtra}` +
@@ -343,6 +343,8 @@ async function loadWeather() {
     data.daily.precipitation_probability_max = extra.daily.precipitation_probability_max;
     data.daily.uv_index_max = extra.daily.uv_index_max;
     data.daily.snowfall_sum = extra.daily.snowfall_sum;
+    data.daily.sunrise = extra.daily.sunrise;
+    data.daily.sunset = extra.daily.sunset;
     data.hourly.precipitation_probability = extra.hourly.precipitation_probability;
 
     renderNow(data);
@@ -464,6 +466,47 @@ function renderDaily(data) {
   }
 }
 
+function computeIsDayArray(times, daily) {
+  return times.map(t => {
+    const dayKey = t.toDateString();
+    const dIdx = daily.time.findIndex(d => new Date(d + "T12:00:00").toDateString() === dayKey);
+    if (dIdx < 0 || !daily.sunrise || !daily.sunset) return true; // Fallback: keine Nacht-Abdunkelung
+    const sunrise = new Date(daily.sunrise[dIdx]);
+    const sunset = new Date(daily.sunset[dIdx]);
+    return t >= sunrise && t <= sunset;
+  });
+}
+
+function makeDayNightPlugin(isDayArr) {
+  return {
+    id: 'dayNightShading',
+    beforeDraw(chart) {
+      const { ctx, chartArea, scales } = chart;
+      if (!chartArea || isDayArr.length < 2) return;
+      const xScale = scales.x;
+      const step = xScale.getPixelForValue(1) - xScale.getPixelForValue(0);
+      const half = step / 2;
+
+      let i = 0;
+      ctx.save();
+      while (i < isDayArr.length) {
+        if (isDayArr[i]) {
+          let j = i;
+          while (j < isDayArr.length && isDayArr[j]) j++;
+          const xStart = xScale.getPixelForValue(i) - half;
+          const xEnd = xScale.getPixelForValue(j - 1) + half;
+          ctx.fillStyle = 'rgba(255,255,255,0.055)';
+          ctx.fillRect(xStart, chartArea.top, xEnd - xStart, chartArea.bottom - chartArea.top);
+          i = j;
+        } else {
+          i++;
+        }
+      }
+      ctx.restore();
+    }
+  };
+}
+
 let tempChart = null;
 
 function renderTempChart(data) {
@@ -482,6 +525,7 @@ function renderTempChart(data) {
 
   const labels = [];
   const values = [];
+  const timestamps = [];
   const dayBoundaries = []; // { index, name }
   let lastDay = null;
 
@@ -489,6 +533,7 @@ function renderTempChart(data) {
     const t = new Date(hourly.time[i]);
     labels.push(t.toLocaleTimeString('de-DE', {hour:'2-digit'}) + ':00');
     values.push(avg(tempKeys.map(k => hourly[k] ? hourly[k][i] : null)));
+    timestamps.push(t);
 
     const dayKey = t.toDateString();
     if (dayKey !== lastDay) {
@@ -496,6 +541,8 @@ function renderTempChart(data) {
       lastDay = dayKey;
     }
   }
+
+  const isDayArr = computeIsDayArray(timestamps, data.daily);
 
   document.getElementById('chart-daylabels').innerHTML = dayBoundaries.map(d => `<span>${d}</span>`).join('');
 
@@ -507,6 +554,7 @@ function renderTempChart(data) {
   if (tempChart) tempChart.destroy();
   tempChart = new Chart(ctx, {
     type: 'line',
+    plugins: [makeDayNightPlugin(isDayArr)],
     data: {
       labels: labels,
       datasets: [{
@@ -562,6 +610,7 @@ function renderRainChart(data) {
 
   const labels = [];
   const values = [];
+  const timestamps = [];
   const dayBoundaries = [];
   let lastDay = null;
 
@@ -569,6 +618,7 @@ function renderRainChart(data) {
     const t = new Date(hourly.time[i]);
     labels.push(t.toLocaleTimeString('de-DE', {hour:'2-digit'}) + ':00');
     values.push(hourly.precipitation_probability ? hourly.precipitation_probability[i] : null);
+    timestamps.push(t);
 
     const dayKey = t.toDateString();
     if (dayKey !== lastDay) {
@@ -576,6 +626,8 @@ function renderRainChart(data) {
       lastDay = dayKey;
     }
   }
+
+  const isDayArr = computeIsDayArray(timestamps, data.daily);
 
   document.getElementById('rain-chart-daylabels').innerHTML = dayBoundaries.map(d => `<span>${d}</span>`).join('');
 
@@ -587,6 +639,7 @@ function renderRainChart(data) {
   if (rainChart) rainChart.destroy();
   rainChart = new Chart(ctx, {
     type: 'line',
+    plugins: [makeDayNightPlugin(isDayArr)],
     data: {
       labels: labels,
       datasets: [{
