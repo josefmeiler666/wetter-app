@@ -121,8 +121,8 @@
 
   .chart-card { background: #182231; border-radius: 16px; padding: 14px 10px 8px; box-shadow: 0 1px 3px rgba(20,30,50,0.06); margin-bottom: 16px; }
   .chart-wrap { position: relative; height: 180px; }
-  .chart-daylabels { display: flex; margin-top: 4px; }
-  .chart-daylabels span { flex: 1; text-align: center; font-size: 11px; color: #8fa0b8; }
+  .chart-daylabels { position: relative; height: 14px; margin-top: 4px; }
+  .chart-daylabels span { position: absolute; top: 0; transform: translateX(-50%); text-align: center; font-size: 11px; color: #8fa0b8; white-space: nowrap; }
 
   #day-sheet .dsh-close { margin-top: 6px; background: none; border: none; color: #8fc4f5; font-size: 14px; padding: 8px; align-self: center; }
   #day-hourly-list { overflow-y: auto; margin-top: 4px; }
@@ -508,6 +508,32 @@ function makeDayNightPlugin(isDayArr) {
   };
 }
 
+// Positioniert die Tageslabel mittig unter dem jeweils hellen (Tag-)Bereich
+// des Charts statt gleichmäßig verteilt, damit "Heute"/"Fr"/... mit der
+// tatsächlichen Tageslicht-Schattierung übereinstimmen.
+function placeDayLabels(containerId, chart, dayBoundaries, isDayArr) {
+  const container = document.getElementById(containerId);
+  if (!container || !chart || !chart.scales || !chart.scales.x) return;
+  const totalLen = isDayArr.length;
+  const xScale = chart.scales.x;
+  const chartWidth = chart.width;
+
+  container.innerHTML = dayBoundaries.map((d, idx) => {
+    const endIdx = idx + 1 < dayBoundaries.length ? dayBoundaries[idx + 1].startIdx : totalLen;
+    let litStart = -1, litEnd = -1;
+    for (let k = d.startIdx; k < endIdx; k++) {
+      if (isDayArr[k]) {
+        if (litStart < 0) litStart = k;
+        litEnd = k;
+      }
+    }
+    const centerIdx = litStart >= 0 ? (litStart + litEnd) / 2 : (d.startIdx + endIdx - 1) / 2;
+    const px = xScale.getPixelForValue(centerIdx);
+    const pct = Math.min(100, Math.max(0, (px / chartWidth) * 100));
+    return `<span style="left:${pct.toFixed(2)}%">${d.label}</span>`;
+  }).join('');
+}
+
 let tempChart = null;
 
 function renderTempChart(data) {
@@ -527,7 +553,7 @@ function renderTempChart(data) {
   const labels = [];
   const values = [];
   const timestamps = [];
-  const dayBoundaries = []; // { index, name }
+  const dayBoundaries = []; // { label, startIdx }
   let lastDay = null;
 
   for (let i = startIdx; i < endIdx; i++) {
@@ -538,14 +564,12 @@ function renderTempChart(data) {
 
     const dayKey = t.toDateString();
     if (dayKey !== lastDay) {
-      dayBoundaries.push(i === startIdx ? 'Heute' : DAYNAMES[t.getDay()]);
+      dayBoundaries.push({ label: i === startIdx ? 'Heute' : DAYNAMES[t.getDay()], startIdx: i - startIdx });
       lastDay = dayKey;
     }
   }
 
   const isDayArr = computeIsDayArray(timestamps, data.daily);
-
-  document.getElementById('chart-daylabels').innerHTML = dayBoundaries.map(d => `<span>${d}</span>`).join('');
 
   const ctx = document.getElementById('temp-chart').getContext('2d');
   const gradient = ctx.createLinearGradient(0, 0, 0, 180);
@@ -592,6 +616,8 @@ function renderTempChart(data) {
       }
     }
   });
+
+  placeDayLabels('chart-daylabels', tempChart, dayBoundaries, isDayArr);
 }
 
 let rainChart = null;
@@ -623,14 +649,12 @@ function renderRainChart(data) {
 
     const dayKey = t.toDateString();
     if (dayKey !== lastDay) {
-      dayBoundaries.push(i === startIdx ? 'Heute' : DAYNAMES[t.getDay()]);
+      dayBoundaries.push({ label: i === startIdx ? 'Heute' : DAYNAMES[t.getDay()], startIdx: i - startIdx });
       lastDay = dayKey;
     }
   }
 
   const isDayArr = computeIsDayArray(timestamps, data.daily);
-
-  document.getElementById('rain-chart-daylabels').innerHTML = dayBoundaries.map(d => `<span>${d}</span>`).join('');
 
   const ctx = document.getElementById('rain-chart').getContext('2d');
   const gradient = ctx.createLinearGradient(0, 0, 0, 180);
@@ -678,6 +702,8 @@ function renderRainChart(data) {
       }
     }
   });
+
+  placeDayLabels('rain-chart-daylabels', rainChart, dayBoundaries, isDayArr);
 }
 
 function renderTips(data) {
