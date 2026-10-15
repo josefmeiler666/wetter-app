@@ -517,6 +517,7 @@ function placeDayLabels(containerId, chart, dayBoundaries, isDayArr) {
   const totalLen = isDayArr.length;
   const xScale = chart.scales.x;
   const chartWidth = chart.width;
+  if (!chartWidth) return; // Chart noch nicht final gelayoutet, onResize/rAF ruft erneut auf
 
   container.innerHTML = dayBoundaries.map((d, idx) => {
     const endIdx = idx + 1 < dayBoundaries.length ? dayBoundaries[idx + 1].startIdx : totalLen;
@@ -596,6 +597,7 @@ function renderTempChart(data) {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { intersect: false, mode: 'index' },
+      onResize: (chart) => placeDayLabels('chart-daylabels', chart, dayBoundaries, isDayArr),
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -618,6 +620,7 @@ function renderTempChart(data) {
   });
 
   placeDayLabels('chart-daylabels', tempChart, dayBoundaries, isDayArr);
+  requestAnimationFrame(() => placeDayLabels('chart-daylabels', tempChart, dayBoundaries, isDayArr));
 }
 
 let rainChart = null;
@@ -681,6 +684,7 @@ function renderRainChart(data) {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { intersect: false, mode: 'index' },
+      onResize: (chart) => placeDayLabels('rain-chart-daylabels', chart, dayBoundaries, isDayArr),
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -704,6 +708,7 @@ function renderRainChart(data) {
   });
 
   placeDayLabels('rain-chart-daylabels', rainChart, dayBoundaries, isDayArr);
+  requestAnimationFrame(() => placeDayLabels('rain-chart-daylabels', rainChart, dayBoundaries, isDayArr));
 }
 
 function renderTips(data) {
