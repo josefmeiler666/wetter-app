@@ -256,7 +256,7 @@
         <span id="radar-time">&mdash;</span>
       </div>
     </div>
-    <p id="radar-attrib">Radardaten (nur Vergangenheit): <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer.com</a> · Karte: OpenStreetMap-Mitwirkende</p>
+    <p id="radar-attrib">Radardaten (nur Vergangenheit): <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer.com</a> · Karte: Esri, HERE, Garmin, OpenStreetMap-Mitwirkende</p>
   </div>
 </main>
 
@@ -967,7 +967,7 @@ let radarMap = null, radarFrames = [], radarLayer = null, radarIdx = 0, radarTim
 function initRadarMap() {
   if (radarMap) return;
   radarMap = L.map('radar-map', { attributionControl: false, zoomControl: false }).setView([LAT, LON], 8);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 12 }).addTo(radarMap);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 12 }).addTo(radarMap);
   L.marker([LAT, LON]).addTo(radarMap);
 }
 
