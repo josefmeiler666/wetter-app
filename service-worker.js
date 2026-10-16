@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kempten-wetter-shell-v3';
+const CACHE_NAME = 'kempten-wetter-shell-v4';
 const SHELL_FILES = [
   './index.html',
   './manifest.json',
@@ -49,9 +49,14 @@ self.addEventListener('fetch', function(event) {
   });
 
   if (isShellFile && event.request.method === 'GET') {
+    // Network-first: Updates erscheinen sofort, Cache nur als Offline-Fallback
     event.respondWith(
-      caches.match(event.request).then(function(cached) {
-        return cached || fetch(event.request);
+      fetch(event.request).then(function(res) {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then(function(c) { c.put(event.request, copy); });
+        return res;
+      }).catch(function() {
+        return caches.match(event.request);
       })
     );
   }

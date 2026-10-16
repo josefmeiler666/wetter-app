@@ -517,7 +517,7 @@ function placeDayLabels(containerId, chart, dayBoundaries, isDayArr) {
   const totalLen = isDayArr.length;
   const xScale = chart.scales.x;
   const chartWidth = chart.width;
-  if (!chartWidth) return; // Chart noch nicht final gelayoutet, onResize/rAF ruft erneut auf
+  if (!chartWidth) return; // Chart noch nicht final gelayoutet, afterUpdate ruft erneut auf
 
   container.innerHTML = dayBoundaries.map((d, idx) => {
     const endIdx = idx + 1 < dayBoundaries.length ? dayBoundaries[idx + 1].startIdx : totalLen;
@@ -528,11 +528,20 @@ function placeDayLabels(containerId, chart, dayBoundaries, isDayArr) {
         litEnd = k;
       }
     }
+    if (litStart < 0 && idx > 0) return ''; // reiner Nacht-Rest am Ende: kein Label
     const centerIdx = litStart >= 0 ? (litStart + litEnd) / 2 : (d.startIdx + endIdx - 1) / 2;
     const px = xScale.getPixelForValue(centerIdx);
-    const pct = Math.min(100, Math.max(0, (px / chartWidth) * 100));
+    const pct = Math.min(96, Math.max(4, (px / chartWidth) * 100));
     return `<span style="left:${pct.toFixed(2)}%">${d.label}</span>`;
   }).join('');
+}
+
+// Chart.js-Plugin: setzt die Tageslabel nach jedem Layout (Scales sind dann final)
+function makeDayLabelPlugin(containerId, dayBoundaries, isDayArr) {
+  return {
+    id: 'dayLabelPlacer',
+    afterUpdate(chart) { placeDayLabels(containerId, chart, dayBoundaries, isDayArr); }
+  };
 }
 
 let tempChart = null;
@@ -580,7 +589,7 @@ function renderTempChart(data) {
   if (tempChart) tempChart.destroy();
   tempChart = new Chart(ctx, {
     type: 'line',
-    plugins: [makeDayNightPlugin(isDayArr)],
+    plugins: [makeDayNightPlugin(isDayArr), makeDayLabelPlugin('chart-daylabels', dayBoundaries, isDayArr)],
     data: {
       labels: labels,
       datasets: [{
@@ -597,7 +606,6 @@ function renderTempChart(data) {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { intersect: false, mode: 'index' },
-      onResize: (chart) => placeDayLabels('chart-daylabels', chart, dayBoundaries, isDayArr),
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -619,8 +627,6 @@ function renderTempChart(data) {
     }
   });
 
-  placeDayLabels('chart-daylabels', tempChart, dayBoundaries, isDayArr);
-  requestAnimationFrame(() => placeDayLabels('chart-daylabels', tempChart, dayBoundaries, isDayArr));
 }
 
 let rainChart = null;
@@ -667,7 +673,7 @@ function renderRainChart(data) {
   if (rainChart) rainChart.destroy();
   rainChart = new Chart(ctx, {
     type: 'line',
-    plugins: [makeDayNightPlugin(isDayArr)],
+    plugins: [makeDayNightPlugin(isDayArr), makeDayLabelPlugin('rain-chart-daylabels', dayBoundaries, isDayArr)],
     data: {
       labels: labels,
       datasets: [{
@@ -684,7 +690,6 @@ function renderRainChart(data) {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { intersect: false, mode: 'index' },
-      onResize: (chart) => placeDayLabels('rain-chart-daylabels', chart, dayBoundaries, isDayArr),
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -707,8 +712,68 @@ function renderRainChart(data) {
     }
   });
 
-  placeDayLabels('rain-chart-daylabels', rainChart, dayBoundaries, isDayArr);
-  requestAnimationFrame(() => placeDayLabels('rain-chart-daylabels', rainChart, dayBoundaries, isDayArr));
+}
+
+// Bier-Sprüche: pro Hinweis mehrere Varianten, zufällig gewählt
+const BEER = {
+  uvHigh: [
+    "Danach ein kühles Bier im Schatten hat man sich verdient.",
+    "Die Sonne brennt, das Bier kühlt – Arbeitsteilung.",
+    "Erst eincremen, dann anstoßen.",
+    "Schatten suchen, Bier finden."
+  ],
+  uvMid: [
+    "Ein Bier im Schatten schadet trotzdem nicht.",
+    "Creme drauf, Hopfen rein – von außen und innen geschützt.",
+    "Sonnenschutz ist wichtig, die Brotzeit samt Bier auch."
+  ],
+  rainHigh: [
+    "Sonst lieber ins Wirtshaus flüchten – dort tropft nur das Bier.",
+    "Regen von oben, Bier von vorn – Wirtshaus ist die Antwort.",
+    "Schlechtes Wetter gibt's nicht, nur zu wenig Bier.",
+    "Bei dem Wetter bleibt man halt sitzen – und bestellt noch eine Halbe."
+  ],
+  rainLow: [
+    "Notfalls tropft drinnen wenigstens nur das Bier.",
+    "Wenn's schüttet, ist die nächste Wirtschaft nicht weit.",
+    "Ein Schirm ist gut, ein Bier im Trockenen ist besser."
+  ],
+  frost: [
+    "Danach gibt's als Belohnung ein Bier.",
+    "Eiskratzen macht durstig – Feierabendbier wartet.",
+    "Gefrorene Scheibe, kaltes Bier: heute passt alles zusammen.",
+    "Erst Eis kratzen, dann Bier – beides gut gekühlt."
+  ],
+  wind: [
+    "Bierglas am Gartentisch auch gut festhalten.",
+    "Bei dem Wind besser kein Bier im Freien – sonst trinkt's der Nachbar.",
+    "Hauptsache, das Bier bleibt im Glas."
+  ],
+  heat: [
+    "Bier zählt nicht als Wasserersatz, schmeckt aber trotzdem.",
+    "Erst Wasser, dann Bier – in dieser Reihenfolge.",
+    "Ab in den Biergarten, aber unter die Kastanien.",
+    "Bei der Hitze ist ein kaltes Helles fast Pflicht."
+  ],
+  cold: [
+    "Kalt draußen – drinnen wärmt ein Bockbier.",
+    "Warm anziehen, später warm anstoßen.",
+    "Auch im Winter gilt: Bier schmeckt, nur das Biergarten-Feeling fehlt."
+  ],
+  nice: [
+    "Biergartenwetter – Brezn nicht vergessen.",
+    "Perfekt für ein Bier draußen, Feierabend lässt grüßen.",
+    "Sonne, Gartenstuhl, Halbe – mehr braucht's nicht."
+  ],
+  calm: [
+    "Ruhiges Wetter – ideal für ein Feierabendbier.",
+    "Nichts los am Himmel, also Zeit für ein Bier.",
+    "Kein Grund zur Sorge – höchstens zum Anstoßen."
+  ]
+};
+function beer(arr) {
+  const t = arr[Math.floor(Math.random() * arr.length)];
+  return `<span class="tip-beer">&#127866; ${t}</span>`;
 }
 
 function renderTips(data) {
@@ -730,33 +795,41 @@ function renderTips(data) {
     const wind = maxOf(windKeys.map(k => daily[k] ? daily[k][i] : null));
 
     if (uv !== null && uv >= 6) {
-      tips.push(["&#9728;", `Hoher UV-Index (${Math.round(uv)}) &ndash; <b>Sonnencreme auftragen</b>, Mittagssonne meiden.<br><span class="tip-beer">&#127866; Danach ein kühles Bier im Schatten hat man sich verdient.</span>`]);
+      tips.push(["&#9728;", `Hoher UV-Index (${Math.round(uv)}) &ndash; <b>Sonnencreme auftragen</b>, Mittagssonne meiden.<br>${beer(BEER.uvHigh)}`]);
     } else if (uv !== null && uv >= 3) {
-      tips.push(["&#9728;", `Mäßiger UV-Index (${Math.round(uv)}) &ndash; <b>Sonnencreme</b> ist sinnvoll.<br><span class="tip-beer">&#127866; Ein Bier im Schatten schadet trotzdem nicht.</span>`]);
+      tips.push(["&#9728;", `Mäßiger UV-Index (${Math.round(uv)}) &ndash; <b>Sonnencreme</b> ist sinnvoll.<br>${beer(BEER.uvMid)}`]);
     }
 
     if (rain !== null && rain >= 50) {
-      tips.push(["&#127752;", `Regenwahrscheinlichkeit ${Math.round(rain)}% &ndash; <b>Regenschirm mitnehmen</b>.<br><span class="tip-beer">&#127866; Sonst lieber ins Wirtshaus flüchten &ndash; dort tropft nur das Bier.</span>`]);
+      tips.push(["&#127752;", `Regenwahrscheinlichkeit ${Math.round(rain)}% &ndash; <b>Regenschirm mitnehmen</b>.<br>${beer(BEER.rainHigh)}`]);
     } else if (rain !== null && rain >= 25) {
-      tips.push(["&#127752;", `Vereinzelt Regen möglich (${Math.round(rain)}%) &ndash; Schirm sicherheitshalber einpacken.<br><span class="tip-beer">&#127866; Notfalls tropft drinnen wenigstens nur das Bier.</span>`]);
+      tips.push(["&#127752;", `Vereinzelt Regen möglich (${Math.round(rain)}%) &ndash; Schirm sicherheitshalber einpacken.<br>${beer(BEER.rainLow)}`]);
     }
 
     if (tMinToday !== null && tMinToday <= 2) {
-      tips.push(["&#10052;", `Frost heute früh (${Math.round(tMinToday)}°C) &ndash; <b>Autoscheiben kratzen</b> einplanen.<br><span class="tip-beer">&#127866; Danach gibt's als Belohnung ein Bier.</span>`]);
+      tips.push(["&#10052;", `Frost heute früh (${Math.round(tMinToday)}°C) &ndash; <b>Autoscheiben kratzen</b> einplanen.<br>${beer(BEER.frost)}`]);
     }
 
     if (wind !== null && wind >= 50) {
-      tips.push(["&#128168;", `Starker Wind bis ${Math.round(wind)} km/h &ndash; lose Gegenstände sichern.<br><span class="tip-beer">&#127866; Bierglas am Gartentisch auch gut festhalten.</span>`]);
+      tips.push(["&#128168;", `Starker Wind bis ${Math.round(wind)} km/h &ndash; lose Gegenstände sichern.<br>${beer(BEER.wind)}`]);
+    }
+
+    if (tMax !== null && tMax <= 4) {
+      tips.push(["&#129509;", `Kalter Tag (max. ${Math.round(tMax)}°C) &ndash; <b>warm anziehen</b>.<br>${beer(BEER.cold)}`]);
+    }
+
+    if (tMax !== null && tMax >= 18 && tMax < 28 && (rain === null || rain < 25) && (uv === null || uv < 3)) {
+      tips.push(["&#127774;", `Angenehm und trocken (bis ${Math.round(tMax)}°C) &ndash; <b>Zeit für draußen</b>.<br>${beer(BEER.nice)}`]);
     }
 
     if (tMax !== null && tMax >= 28) {
-      tips.push(["&#128167;", `Hitze bis ${Math.round(tMax)}°C &ndash; ausreichend trinken, Anstrengung meiden.<br><span class="tip-beer">&#127866; Bier zählt nicht als Wasserersatz, schmeckt aber trotzdem.</span>`]);
+      tips.push(["&#128167;", `Hitze bis ${Math.round(tMax)}°C &ndash; ausreichend trinken, Anstrengung meiden.<br>${beer(BEER.heat)}`]);
     }
   }
 
   const card = document.getElementById('tips-card');
   if (!tips.length) {
-    card.innerHTML = '<div id="tips-empty">Keine besonderen Hinweise &ndash; unauffälliges Wetter.</div>';
+    card.innerHTML = `<div id="tips-empty">Keine besonderen Hinweise &ndash; unauffälliges Wetter.<br>${beer(BEER.calm)}</div>`;
     return;
   }
   card.innerHTML = tips.map(([icon, text]) =>
