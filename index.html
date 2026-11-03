@@ -121,6 +121,8 @@
 
   .chart-card { background: #182231; border-radius: 16px; padding: 14px 10px 8px; box-shadow: 0 1px 3px rgba(20,30,50,0.06); margin-bottom: 16px; }
   .chart-wrap { position: relative; height: 180px; }
+  #sun-summary { display: flex; justify-content: space-around; font-size: 13px; color: #8fa0b8; padding: 0 0 10px; }
+  #sun-summary b { color: #f7c948; font-weight: 600; }
   .chart-daylabels { position: relative; height: 14px; margin-top: 4px; }
   .chart-daylabels span { position: absolute; top: 0; transform: translateX(-50%); text-align: center; font-size: 11px; color: #8fa0b8; white-space: nowrap; }
 
@@ -237,6 +239,13 @@
       <div class="chart-daylabels" id="rain-chart-daylabels"></div>
     </div>
 
+    <div class="section-label">Sonnenstunden (heute &amp; morgen)</div>
+    <div class="chart-card">
+      <div id="sun-summary"></div>
+      <div class="chart-wrap"><canvas id="sun-chart"></canvas></div>
+      <div class="chart-daylabels" id="sun-chart-daylabels"></div>
+    </div>
+
     <div class="section-label">11-Tage-Konsens-Vorhersage</div>
     <div id="daily-list"></div>
 
@@ -329,8 +338,8 @@ async function loadWeather() {
       `&daily=${dailyCore}&hourly=${hourlyCore}&current_weather=true` +
       `&timezone=Europe%2FBerlin&forecast_days=11&models=${modelsParam}`;
 
-    const dailyExtra = "precipitation_probability_max,uv_index_max,snowfall_sum,sunrise,sunset";
-    const hourlyExtra = "precipitation_probability";
+    const dailyExtra = "precipitation_probability_max,uv_index_max,snowfall_sum,sunrise,sunset,sunshine_duration";
+    const hourlyExtra = "precipitation_probability,sunshine_duration";
     const extraUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
       `&daily=${dailyExtra}&hourly=${hourlyExtra}` +
       `&timezone=Europe%2FBerlin&forecast_days=11`;
@@ -346,12 +355,15 @@ async function loadWeather() {
     data.daily.snowfall_sum = extra.daily.snowfall_sum;
     data.daily.sunrise = extra.daily.sunrise;
     data.daily.sunset = extra.daily.sunset;
+    data.daily.sunshine_duration = extra.daily.sunshine_duration;
+    data.hourly.sunshine_duration = extra.hourly.sunshine_duration;
     data.hourly.precipitation_probability = extra.hourly.precipitation_probability;
 
     renderNow(data);
     renderHourly(data);
     try { renderTempChart(data); } catch (chartErr) { console.error('Chart-Fehler:', chartErr); }
     try { renderRainChart(data); } catch (chartErr) { console.error('Regen-Chart-Fehler:', chartErr); }
+    try { renderSunChart(data); } catch (chartErr) { console.error('Sonnen-Chart-Fehler:', chartErr); }
     renderDaily(data);
     renderTips(data);
     renderSources();
@@ -568,7 +580,7 @@ function renderTempChart(data) {
 
   for (let i = startIdx; i < endIdx; i++) {
     const t = new Date(hourly.time[i]);
-    labels.push(t.toLocaleTimeString('de-DE', {hour:'2-digit'}) + ':00');
+    labels.push(String(t.getHours()).padStart(2,'0') + ':00');
     values.push(avg(tempKeys.map(k => hourly[k] ? hourly[k][i] : null)));
     timestamps.push(t);
 
@@ -652,7 +664,7 @@ function renderRainChart(data) {
 
   for (let i = startIdx; i < endIdx; i++) {
     const t = new Date(hourly.time[i]);
-    labels.push(t.toLocaleTimeString('de-DE', {hour:'2-digit'}) + ':00');
+    labels.push(String(t.getHours()).padStart(2,'0') + ':00');
     values.push(hourly.precipitation_probability ? hourly.precipitation_probability[i] : null);
     timestamps.push(t);
 
@@ -765,15 +777,107 @@ const BEER = {
     "Perfekt für ein Bier draußen, Feierabend lässt grüßen.",
     "Sonne, Gartenstuhl, Halbe – mehr braucht's nicht."
   ],
+  gluehwein: [
+    "Danach gibt's einen heißen Glühwein zum Auftauen.",
+    "Eiskratzen, dann Glühwein – die Reihenfolge stimmt.",
+    "Unter null ist Glühwein-Zeit, das Bier darf pausieren.",
+    "Gefrorene Finger? Glühwein wärmt von innen.",
+    "Kalt draußen, heiß im Becher: Glühwein.",
+    "Handschuhe an, Glühwein in die Hand – der Christkindlmarkt ruft.",
+    "Das Bier friert heut eh im Glas ein – nimm Glühwein.",
+    "Ein Glühwein wärmt, zwei auch – dann aber das Auto stehen lassen."
+  ],
   calm: [
     "Ruhiges Wetter – ideal für ein Feierabendbier.",
     "Nichts los am Himmel, also Zeit für ein Bier.",
     "Kein Grund zur Sorge – höchstens zum Anstoßen."
   ]
 };
-function beer(arr) {
+function beer(arr, belowZero) {
+  if (belowZero) arr = BEER.gluehwein;
   const t = arr[Math.floor(Math.random() * arr.length)];
-  return `<span class="tip-beer">&#127866; ${t}</span>`;
+  return `<span class="tip-beer">${belowZero ? '&#127863;' : '&#127866;'} ${t}</span>`;
+}
+
+let sunChart = null;
+
+function renderSunChart(data) {
+  const card = document.getElementById('sun-chart').closest('.chart-card');
+  if (typeof Chart === 'undefined') {
+    card.innerHTML = '<div style="padding:16px; font-size:13px; color:#8fa0b8; text-align:center;">Diagramm momentan nicht verfügbar.</div>';
+    return;
+  }
+  const hourly = data.hourly;
+  if (!hourly.sunshine_duration) { card.style.display = 'none'; return; }
+
+  // Heute 00:00 bis morgen 24:00 (48 Stunden), damit beide Tage komplett sichtbar sind
+  const todayKey = new Date().toDateString();
+  let startIdx = hourly.time.findIndex(t => new Date(t).toDateString() === todayKey);
+  if (startIdx < 0) startIdx = 0;
+  const endIdx = Math.min(startIdx + 48, hourly.time.length);
+
+  const labels = [], values = [], timestamps = [], dayBoundaries = [];
+  let lastDay = null;
+  for (let i = startIdx; i < endIdx; i++) {
+    const t = new Date(hourly.time[i]);
+    labels.push(String(t.getHours()).padStart(2,'0') + ':00');
+    const sec = hourly.sunshine_duration[i];
+    values.push(sec === null || sec === undefined ? null : Math.round(sec / 60)); // Minuten pro Stunde
+    timestamps.push(t);
+    const dayKey = t.toDateString();
+    if (dayKey !== lastDay) {
+      dayBoundaries.push({ label: dayBoundaries.length === 0 ? 'Heute' : 'Morgen', startIdx: i - startIdx });
+      lastDay = dayKey;
+    }
+  }
+
+  // Zusammenfassung: Sonnenstunden pro Tag
+  const sd = data.daily.sunshine_duration;
+  const fmt = (sec) => (sec === null || sec === undefined) ? '–' : (sec / 3600).toLocaleString('de-DE', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + ' Std';
+  document.getElementById('sun-summary').innerHTML = sd
+    ? `<span>Heute: <b>${fmt(sd[0])}</b></span><span>Morgen: <b>${fmt(sd[1])}</b></span>`
+    : '';
+
+  const isDayArr = computeIsDayArray(timestamps, data.daily);
+  const ctx = document.getElementById('sun-chart').getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, 0, 180);
+  gradient.addColorStop(0, 'rgba(247,201,72,0.45)');
+  gradient.addColorStop(1, 'rgba(247,201,72,0.03)');
+
+  if (sunChart) sunChart.destroy();
+  sunChart = new Chart(ctx, {
+    type: 'line',
+    plugins: [makeDayNightPlugin(isDayArr), makeDayLabelPlugin('sun-chart-daylabels', dayBoundaries, isDayArr)],
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        borderColor: '#f7c948',
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.3,
+        pointRadius: 0,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (c) => c.parsed.y + ' Min Sonne in dieser Stunde' } }
+      },
+      scales: {
+        x: { ticks: { maxTicksLimit: 8, font: { size: 10 }, color: '#8fa0b8' }, grid: { display: false } },
+        y: {
+          min: 0, max: 60,
+          ticks: { font: { size: 10 }, color: '#8fa0b8', callback: (v) => v + ' min', stepSize: 15 },
+          grid: { color: '#253244' }
+        }
+      }
+    }
+  });
 }
 
 function renderTips(data) {
@@ -807,7 +911,7 @@ function renderTips(data) {
     }
 
     if (tMinToday !== null && tMinToday <= 2) {
-      tips.push(["&#10052;", `Frost heute früh (${Math.round(tMinToday)}°C) &ndash; <b>Autoscheiben kratzen</b> einplanen.<br>${beer(BEER.frost)}`]);
+      tips.push(["&#10052;", `Frost heute früh (${Math.round(tMinToday)}°C) &ndash; <b>Autoscheiben kratzen</b> einplanen.<br>${beer(BEER.frost, tMinToday < 0)}`]);
     }
 
     if (wind !== null && wind >= 50) {
@@ -815,7 +919,7 @@ function renderTips(data) {
     }
 
     if (tMax !== null && tMax <= 4) {
-      tips.push(["&#129509;", `Kalter Tag (max. ${Math.round(tMax)}°C) &ndash; <b>warm anziehen</b>.<br>${beer(BEER.cold)}`]);
+      tips.push(["&#129509;", `Kalter Tag (max. ${Math.round(tMax)}°C) &ndash; <b>warm anziehen</b>.<br>${beer(BEER.cold, tMinToday !== null && tMinToday < 0)}`]);
     }
 
     if (tMax !== null && tMax >= 18 && tMax < 28 && (rain === null || rain < 25) && (uv === null || uv < 3)) {
