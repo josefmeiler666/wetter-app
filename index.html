@@ -36,6 +36,22 @@
     padding: 0 14px;
   }
   #topbar .title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  #topbar .title { background: none; border: none; color: inherit; font-family: inherit; padding: 6px 4px; margin-left: -4px; cursor: pointer; text-align: left; }
+  #topbar .title .caret { font-size: 11px; color: #8fa0b8; margin-left: 2px; }
+  .star-btn { background: none; border: none; font-size: 24px; line-height: 1; padding: 6px 8px; color: #6b7a90; cursor: pointer; flex-shrink: 0; }
+  .star-btn.on { color: #f7c948; }
+  .loc-result { display: flex; align-items: center; gap: 8px; }
+  .loc-result .ltext { flex: 1; min-width: 0; }
+  #fav-overlay { position: fixed; inset: 0; background: rgba(20,30,50,0.5); display: none; align-items: flex-end; z-index: 100; }
+  #fav-overlay.show { display: flex; }
+  #fav-sheet { background: #161f2c; width: 100%; border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); max-height: 70vh; display: flex; flex-direction: column; }
+  #fav-sheet h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+  #fav-list { overflow-y: auto; }
+  #fav-empty { font-size: 13px; color: #8fa0b8; padding: 10px 4px; line-height: 1.5; }
+  .fav-row.current .lname::after { content: " \2713"; color: #f7c948; }
+  .fav-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .fav-actions button { flex: 1; min-width: 140px; padding: 10px 12px; border-radius: 10px; border: 1px solid #33465f; background: #1f2a3a; color: #eef1f5; font-size: 14px; cursor: pointer; }
+  #fav-close { margin-top: 8px; background: none; border: none; color: #8fc4f5; font-size: 14px; padding: 8px; align-self: center; }
   #topbar .dot { width: 7px; height: 7px; border-radius: 50%; background: #f7b538; }
   #reload-btn, #location-btn {
     background: rgba(255,255,255,0.14); border: none; color: #f5f7fa;
@@ -178,7 +194,7 @@
 
 <div id="topbar">
   <div id="topbar-inner">
-    <div class="title"><span class="dot"></span><span id="app-title">Kempten Wetter</span></div>
+    <button class="title" id="title-btn" aria-label="Favoriten öffnen"><span class="dot"></span><span id="app-title">Kempten Wetter</span><span class="caret">&#9662;</span></button>
     <div style="display:flex; gap:8px;">
       <button id="location-btn" aria-label="Standort ändern">&#128205;</button>
       <button id="reload-btn" aria-label="Aktualisieren">&#8635;</button>
@@ -193,6 +209,18 @@
     <div id="loc-status"></div>
     <div id="loc-results"></div>
     <button id="loc-close">Abbrechen</button>
+  </div>
+</div>
+
+<div id="fav-overlay">
+  <div id="fav-sheet">
+    <h3>&#9733; Favoriten</h3>
+    <div id="fav-list"></div>
+    <div class="fav-actions">
+      <button id="fav-add-current"></button>
+      <button id="fav-search">&#128205; Ort suchen</button>
+    </div>
+    <button id="fav-close">Schließen</button>
   </div>
 </div>
 
@@ -1189,13 +1217,69 @@ const locResults = document.getElementById('loc-results');
 const locStatus = document.getElementById('loc-status');
 let locSearchTimer = null;
 
-document.getElementById('location-btn').addEventListener('click', function() {
+// --- Favoriten ---
+const FAV_KEY = 'wetter-app-favorites';
+function loadFavs() {
+  try { const a = JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+}
+function saveFavs(list) { try { localStorage.setItem(FAV_KEY, JSON.stringify(list)); } catch (e) {} }
+const favKey = (lat, lon) => Number(lat).toFixed(3) + ',' + Number(lon).toFixed(3);
+function isFav(lat, lon) { return loadFavs().some(f => favKey(f.latitude, f.longitude) === favKey(lat, lon)); }
+function toggleFav(r) {
+  let list = loadFavs();
+  const k = favKey(r.latitude, r.longitude);
+  if (list.some(f => favKey(f.latitude, f.longitude) === k)) {
+    list = list.filter(f => favKey(f.latitude, f.longitude) !== k);
+  } else {
+    list.push({ latitude: r.latitude, longitude: r.longitude, name: r.name, admin1: r.admin1 || null, country: r.country || null });
+  }
+  saveFavs(list);
+}
+function currentAsResult() {
+  const m = PLACE_NAME.match(/^(.*?)\s*\((.*)\)$/);
+  return { latitude: LAT, longitude: LON, name: m ? m[1] : PLACE_NAME, admin1: m ? m[2] : null };
+}
+
+const favOverlay = document.getElementById('fav-overlay');
+const favList = document.getElementById('fav-list');
+
+function renderFavs() {
+  const list = loadFavs();
+  favList.innerHTML = '';
+  if (!list.length) {
+    favList.innerHTML = '<div id="fav-empty">Noch keine Favoriten. Merke dir den aktuellen Ort oder suche einen Ort und tippe dort auf den Stern.</div>';
+  }
+  list.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'loc-result fav-row' + (favKey(f.latitude, f.longitude) === favKey(LAT, LON) ? ' current' : '');
+    const region = [f.admin1, f.country].filter(Boolean).join(', ');
+    row.innerHTML = `<div class="ltext"><div class="lname"></div><div class="lregion"></div></div><button class="star-btn on" aria-label="Aus Favoriten entfernen">&#9733;</button>`;
+    row.querySelector('.lname').textContent = f.name;
+    row.querySelector('.lregion').textContent = region;
+    row.querySelector('.ltext').addEventListener('click', () => { favOverlay.classList.remove('show'); selectLocation(f); });
+    row.querySelector('.star-btn').addEventListener('click', (e) => { e.stopPropagation(); toggleFav(f); renderFavs(); });
+    favList.appendChild(row);
+  });
+  const addBtn = document.getElementById('fav-add-current');
+  const cur = isFav(LAT, LON);
+  addBtn.innerHTML = cur ? '&#9734; Aktuellen Ort entfernen' : '&#9733; Aktuellen Ort merken';
+}
+
+document.getElementById('title-btn').addEventListener('click', function() { renderFavs(); favOverlay.classList.add('show'); });
+document.getElementById('fav-close').addEventListener('click', () => favOverlay.classList.remove('show'));
+favOverlay.addEventListener('click', e => { if (e.target === favOverlay) favOverlay.classList.remove('show'); });
+document.getElementById('fav-add-current').addEventListener('click', () => { toggleFav(currentAsResult()); renderFavs(); });
+document.getElementById('fav-search').addEventListener('click', () => { favOverlay.classList.remove('show'); openLocSearch(); });
+
+function openLocSearch() {
   locOverlay.classList.add('show');
   locInput.value = '';
   locResults.innerHTML = '';
   locStatus.textContent = '';
   setTimeout(() => locInput.focus(), 100);
-});
+}
+
+document.getElementById('location-btn').addEventListener('click', openLocSearch);
 
 document.getElementById('loc-close').addEventListener('click', function() {
   locOverlay.classList.remove('show');
@@ -1226,7 +1310,13 @@ async function searchLocation(query) {
       const parts = [r.admin1, r.country].filter(Boolean);
       const div = document.createElement('div');
       div.className = 'loc-result';
-      div.innerHTML = `<div class="lname">${r.name}</div><div class="lregion">${parts.join(', ')}</div>`;
+      div.innerHTML = `<div class="ltext"><div class="lname"></div><div class="lregion"></div></div><button class="star-btn" aria-label="Favorit"></button>`;
+      div.querySelector('.lname').textContent = r.name;
+      div.querySelector('.lregion').textContent = parts.join(', ');
+      const star = div.querySelector('.star-btn');
+      const paint = () => { const on = isFav(r.latitude, r.longitude); star.classList.toggle('on', on); star.innerHTML = on ? '&#9733;' : '&#9734;'; };
+      paint();
+      star.addEventListener('click', (e) => { e.stopPropagation(); toggleFav(r); paint(); });
       div.addEventListener('click', () => selectLocation(r));
       locResults.appendChild(div);
     });
